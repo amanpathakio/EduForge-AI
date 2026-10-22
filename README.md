@@ -121,6 +121,15 @@ TOP_K=4
 
 ## 🚀 Setup & Running Instructions
 
+### 1. Create Virtual Environment & Install Dependencies
+
+```bash
+cd "d:\EduForge AI"
+python -m venv backend/venv
+.\backend\venv\Scripts\Activate.ps1
+pip install -r backend/requirements.txt
+```
+
 ### ⚡ Quick Start (Run Both Frontend & Backend Together)
 
 From the project root (`d:\EduForge AI`), simply run:
@@ -153,7 +162,6 @@ This starts both:
   ```bash
   npm test
   ```
-
 
 ---
 
