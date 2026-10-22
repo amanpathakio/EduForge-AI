@@ -2,7 +2,7 @@ import os
 import shutil
 import logging
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, UploadFile, File, HTTPException, status, Query
+from fastapi import APIRouter, UploadFile, File, HTTPException, status, Query, Depends
 from pydantic import BaseModel, Field
 
 from app.config import settings
@@ -12,6 +12,7 @@ from app.rag.embeddings import embedding_manager, EmbeddingError
 from app.rag.vector_store import vector_store_manager, VectorStoreError
 from app.rag.retriever import retrieve_relevant_chunks
 from app.rag.generator import generate_grounded_answer, GenerationError
+from app.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ class HealthResponse(BaseModel):
     gemini_api_key_configured: bool
 
 @router.get("/health", response_model=HealthResponse)
-def health_check():
+def health_check(_user=Depends(get_current_user)):
     """
     Check API health and status of vector store and Gemini configuration.
     """
@@ -71,6 +72,7 @@ async def upload_document(file: UploadFile = File(...)):
     """
     Upload and index a course PDF document into the RAG vector database.
     """
+    raise HTTPException(status_code=status.HTTP_410_GONE, detail="Use the course-specific upload endpoint; global uploads are disabled for tenant isolation.")
     # 1. Validate file extension
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
@@ -90,6 +92,9 @@ async def upload_document(file: UploadFile = File(...)):
 
         # 3. Create text chunks
         chunks = create_chunks(pages_data)
+        for c in chunks:
+            c["metadata"]["document_id"] = doc_id
+            c["metadata"]["filename"] = file.filename
 
         # 4. Generate embeddings
         chunk_texts = [c["text"] for c in chunks]
@@ -97,6 +102,37 @@ async def upload_document(file: UploadFile = File(...)):
 
         # 5. Store vectors in ChromaDB
         vector_store_manager.add_chunks(chunks, embeddings)
+
+        # 6. Record in relational DB under a default course for consistency
+        try:
+            from app.db.session import SessionLocal
+            from app.models.course import Course
+            from app.models.document import Document
+            from sqlalchemy import select
+
+            with SessionLocal() as db:
+                default_course = db.scalar(select(Course).where(Course.id == "default-course"))
+                if not default_course:
+                    default_course = Course(
+                        id="default-course",
+                        title="General Course",
+                        description="Default workspace course for general uploads"
+                    )
+                    db.add(default_course)
+                    db.commit()
+
+                doc = Document(
+                    id=doc_id,
+                    course_id="default-course",
+                    filename=file.filename,
+                    file_path=temp_path,
+                    pages_count=len(pages_data),
+                    chunks_count=len(chunks)
+                )
+                db.add(doc)
+                db.commit()
+        except Exception as db_err:
+            logger.warning(f"Could not persist legacy upload to DB (non-fatal): {str(db_err)}")
 
         return UploadResponse(
             status="success",
@@ -124,6 +160,7 @@ def chat_with_course(request: ChatRequest):
     Query the course material. Retrieves relevant context chunks from ChromaDB
     and generates a course-grounded answer with source citations via Gemini.
     """
+    raise HTTPException(status_code=status.HTTP_410_GONE, detail="Use the course-specific chat endpoint; global chat is disabled for tenant isolation.")
     try:
         # 1. Retrieve top-k chunks from ChromaDB
         retrieved_chunks = retrieve_relevant_chunks(

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduForge AI — Grounded RAG Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Link to Stylesheet -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Floating Ambient Background Blobs for Visual Aesthetics -->
+        <div class="bg-blob blob-purple"></div>
+        <div class="bg-blob blob-blue"></div>
+
+        <!-- Warning Banner for Gemini API Key configuration -->
+        <div id="api-key-warning" class="api-warning-banner hidden">
+            <svg class="warning-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <span><strong>Gemini API Key Missing:</strong> Please configure <code>GEMINI_API_KEY</code> in your <code>backend/.env</code> file to enable grounded answer generation.</span>
+        </div>
+
+        <!-- Main Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="logo-container">
+                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="url(#logo-grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 17L12 22L22 17" stroke="url(#logo-grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="url(#logo-grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <defs>
+                            <linearGradient id="logo-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#8b5cf6"/>
+                                <stop offset="1" stop-color="#3b82f6"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <span class="logo-text">EduForge <span class="accent-text">AI</span></span>
+                </div>
+                <span class="badge phase-badge">Phase 1: Grounded RAG</span>
+            </div>
+            
+            <div class="header-right">
+                <div class="status-indicator">
+                    <span id="backend-status-dot" class="status-dot offline"></span>
+                    <span id="backend-status-text" class="status-text">Connecting...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Workspace -->
+        <main class="dashboard-grid">
+            
+            <!-- Left Panel: Control and Document Management -->
+            <section class="control-panel">
+                <!-- Upload Box -->
+                <div class="glass-card upload-card">
+                    <h2 class="card-title">
+                        <svg class="title-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V4a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                        </svg>
+                        Course Materials Loader
+                    </h2>
+                    <p class="card-subtitle">Upload course PDFs to populate the grounded knowledge base.</p>
+                    
+                    <div id="drop-zone" class="drop-zone">
+                        <input type="file" id="file-input" accept=".pdf" class="hidden-file-input">
+                        <div class="drop-zone-content">
+                            <svg class="upload-cloud-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                            <span class="upload-text-primary">Drag & drop your course PDF here</span>
+                            <span class="upload-text-secondary">or click to browse files</span>
+                        </div>
+                    </div>
+
+                    <!-- Uploading Progress State -->
+                    <div id="upload-progress-container" class="upload-progress-container hidden">
+                        <div class="progress-info">
+                            <span id="uploading-filename" class="filename-text">document.pdf</span>
+                            <span id="upload-percentage" class="percentage-text">0%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div id="upload-progress-bar" class="progress-bar-fill" style="width: 0%"></div>
+                        </div>
+                        <p id="processing-msg" class="processing-msg hidden">
+                            <svg class="spinner-icon mini" viewBox="0 0 24 24" fill="none">
+                                <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                                <circle class="spinner-head" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="45"></circle>
+                            </svg>
+                            Extracting pages, chunking text, and indexing in ChromaDB...
+                        </p>
+                    </div>
+
+                    <!-- Upload Result Toast/Notification inside card -->
+                    <div id="upload-feedback" class="feedback-box hidden"></div>
+                </div>
+
+                <!-- Database Metrics Card -->
+                <div class="glass-card stats-card">
+                    <h2 class="card-title">
+                        <svg class="title-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.58 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.58 4 8 4s8-1.79 8-4M4 7c0-2.21 3.58-4 8-4s8 1.79 8 4m0 5c0 2.21-3.58 4-8 4s-8-1.79-8-4"/>
+                        </svg>
+                        Vector Store & RAG Stats
+                    </h2>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Indexed Chunks</span>
+                            <span id="stat-chunks" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">DB Storage Path</span>
+                            <span id="stat-db-path" class="stat-value-sub">chroma_db</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Embedding Model</span>
+                            <span class="stat-value-sub text-highlight">bge-small-en-v1.5</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Retrieval Strategy</span>
+                            <span class="stat-value-sub">Dense Vector Similarity</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grounding Rules Card for Professors -->
+                <div class="glass-card rules-card">
+                    <h2 class="card-title">
+                        <svg class="title-icon text-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                        Strict Grounding Safeguard
+                    </h2>
+                    <p class="rules-desc">
+                        This pipeline guarantees <strong>zero hallucination</strong> on out-of-context questions. The Gemini generation module is strictly prompted to refuse answering if the retrieved semantic chunks do not contain the answer.
+                    </p>
+                    <div class="rules-bullets">
+                        <div class="rule-bullet">
+                            <span class="bullet-dot"></span>
+                            <span>Answers drawn <strong>only</strong> from PDF text.</span>
+                        </div>
+                        <div class="rule-bullet">
+                            <span class="bullet-dot"></span>
+                            <span>Precise page and document sources provided.</span>
+                        </div>
+                        <div class="rule-bullet">
+                            <span class="bullet-dot"></span>
+                            <span>Direct chunk inspector for citation auditing.</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Grounded Chat Workspace -->
+            <section class="chat-panel">
+                <div class="glass-card chat-card-container">
+                    <div class="chat-header">
+                        <div class="chat-header-title-wrapper">
+                            <h2 class="chat-title">Grounded AI Chat Tutor</h2>
+                            <p class="chat-subtitle">Ask questions based on your course material.</p>
+                        </div>
+                        <button id="clear-chat-btn" class="icon-button" title="Clear Chat History">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Chat Message Area -->
+                    <div id="chat-messages" class="chat-messages-container">
+                        <!-- Welcome Screen (Visible initially) -->
+                        <div id="welcome-screen" class="welcome-screen">
+                            <div class="welcome-icon-container">
+                                <svg class="welcome-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                </svg>
+                            </div>
+                            <h3 class="welcome-heading">Welcome to EduForge AI</h3>
+                            <p class="welcome-tagline">Your course-grounded intelligent assistant.</p>
+                            
+                            <div class="welcome-steps">
+                                <div class="step-card">
+                                    <span class="step-num">1</span>
+                                    <h4 class="step-title">Upload Materials</h4>
+                                    <p class="step-desc">Drop a course PDF on the left. The system will extract, chunk, and embed the text.</p>
+                                </div>
+                                <div class="step-card">
+                                    <span class="step-num">2</span>
+                                    <h4 class="step-title">Ask Questions</h4>
+                                    <p class="step-desc">Type your queries. The RAG engine retrieves course content relevant to your query.</p>
+                                </div>
+                                <div class="step-card">
+                                    <span class="step-num">3</span>
+                                    <h4 class="step-title">Audit Citations</h4>
+                                    <p class="step-desc">Review the generated answer and click citation sources to inspect original text chunks.</p>
+                                </div>
+                            </div>
+
+                            <!-- Sample Questions Suggestions (Hidden if DB empty, shown dynamically) -->
+                            <div id="suggestions-container" class="suggestions-container hidden">
+                                <p class="suggestion-label">Suggested Questions:</p>
+                                <div id="suggestion-pills" class="suggestion-pills">
+                                    <!-- Populated by JS based on indexing -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Input Area -->
+                    <form id="chat-form" class="chat-input-form">
+                        <div class="input-wrapper">
+                            <textarea id="chat-input" placeholder="Ask a question about the course materials..." rows="1" required></textarea>
+                            <button type="submit" id="send-btn" class="send-button" disabled>
+                                <svg class="send-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Slide-Out Citation Inspector Drawer (Persistent modal) -->
+    <div id="citation-drawer" class="citation-drawer-overlay hidden">
+        <div class="drawer-content glass-card">
+            <div class="drawer-header">
+                <div>
+                    <span class="badge citation-type-badge">Source Chunk Auditor</span>
+                    <h3 id="drawer-source-title" class="drawer-title">Document.pdf — Page 1</h3>
+                </div>
+                <button id="close-drawer-btn" class="icon-button close-btn">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="drawer-body">
+                <div class="drawer-section">
+                    <h4 class="section-label">Retrieved Content Chunk:</h4>
+                    <blockquote id="drawer-chunk-text" class="retrieved-text-block">
+                        Chunk content will load here...
+                    </blockquote>
+                </div>
+
+                <div class="drawer-metadata-grid">
+                    <div class="meta-item">
+                        <span class="meta-label">Similarity Margin (Distance)</span>
+                        <div class="distance-progress-wrapper">
+                            <span id="drawer-distance-val" class="meta-value">0.182</span>
+                            <div class="distance-bar-bg">
+                                <div id="drawer-distance-bar" class="distance-bar-fill" style="width: 80%;"></div>
+                            </div>
+                        </div>
+                        <span class="meta-note">Lower values indicate higher semantic similarity.</span>
+                    </div>
+
+                    <div class="meta-item">
+                        <span class="meta-label">Chunk Coordinates</span>
+                        <span id="drawer-chunk-id" class="meta-value-code">doc_id_p1_c1</span>
+                    </div>
+
+                    <div class="meta-item">
+                        <span class="meta-label">Source File Location</span>
+                        <span id="drawer-file-path" class="meta-value-path">data/uploads/filename.pdf</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/app.js"></script>
+</body>
+</html>

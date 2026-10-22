@@ -6,19 +6,20 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-def retrieve_relevant_chunks(question: str, top_k: int = None) -> List[Dict[str, Any]]:
+def retrieve_relevant_chunks(question: str, top_k: int = None, course_id: str = None) -> List[Dict[str, Any]]:
     """
-    Retrieve top-k relevant document chunks for a user question.
+    Retrieve top-k relevant document chunks for a user question, optionally filtered by course_id.
 
     Workflow:
     1. Query received
     2. Question embedded via BAAI/bge-small-en-v1.5
-    3. Perform ChromaDB similarity search
+    3. Perform ChromaDB similarity search (filtered by course_id if provided)
     4. Return chunks + metadata
 
     Args:
         question: User query text.
         top_k: Number of chunks to retrieve. Defaults to settings.TOP_K.
+        course_id: Optional course ID to filter chunks by.
 
     Returns:
         List of retrieved chunk dicts with 'id', 'text', 'metadata', and 'distance'.
@@ -28,7 +29,7 @@ def retrieve_relevant_chunks(question: str, top_k: int = None) -> List[Dict[str,
         return []
 
     k = top_k if top_k is not None else settings.TOP_K
-    logger.info(f"Query received: '{question}' (top_k={k})")
+    logger.info(f"Query received: '{question}' (top_k={k}, course_id={course_id})")
 
     # Step 1: Embed question
     query_embedding = embedding_manager.embed_query(question)
@@ -36,7 +37,8 @@ def retrieve_relevant_chunks(question: str, top_k: int = None) -> List[Dict[str,
     # Step 2: Similarity search in ChromaDB
     retrieved_chunks = vector_store_manager.similarity_search(
         query_embedding=query_embedding,
-        top_k=k
+        top_k=k,
+        course_id=course_id
     )
 
     # Apply configurable relevance filtering based on distance returned by ChromaDB.

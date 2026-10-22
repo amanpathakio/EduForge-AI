@@ -17,10 +17,19 @@ class Settings(BaseSettings):
     CHUNK_SIZE: int = 800
     CHUNK_OVERLAP: int = 150
     TOP_K: int = 4
+    # Database Configuration (PostgreSQL with SQLite fallback)
+    DATABASE_URL: str = f"sqlite:///{BASE_DIR / 'data' / 'eduforge.db'}"
+
     # Relevance filtering: distance threshold for accepting retrieved chunks from ChromaDB.
     # For Chroma configured with `hnsw:space` = "cosine", Chroma returns a cosine-distance
     # where smaller is more similar (0 = identical). Tune this via environment variable.
     RELEVANCE_DISTANCE_THRESHOLD: float = 0.45
+    # Supabase public values identify the issuer; the service-role key is never used here.
+    SUPABASE_URL: str = ""
+    SUPABASE_JWT_AUDIENCE: str = "authenticated"
+    SUPABASE_JWKS_URL: str = ""
+    AUTH_REQUIRED: bool = True
+    FRONTEND_ORIGINS: str = "http://localhost:5173"
 
     model_config = SettingsConfigDict(
         env_file=str(BASE_DIR / ".env"),

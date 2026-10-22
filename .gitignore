@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+backend/venv/
+backend/.venv/
+.venv/
+
+# Environment variables
+.env
+backend/.env
+
+# Local Storage / Uploads / ChromaDB
+backend/chroma_db/
+backend/data/uploads/*
+!backend/data/uploads/.gitkeep
+
+# IDEs
+.vscode/
+.idea/
+
+# Pytest / Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# EduForge local files
+chroma_db/
+data/
+backend/data/
+*.db
+*.sqlite
+*.sqlite3
+sample_course.pdf
+
+# Local JavaScript installs and scratch/source material
+/node_modules/
+/tmp/
+*.pdf
