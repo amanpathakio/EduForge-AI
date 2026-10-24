@@ -2,7 +2,10 @@
  * EduForge AI API Service
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+// In local Vite development, use the same-origin proxy configured in
+// vite.config.js. It avoids browser CORS/network differences between
+// localhost and 127.0.0.1. Production uses the explicitly configured API.
+const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || '');
 import { supabase } from '../lib/supabase';
 
 async function authHeaders(extra = {}) {
@@ -22,7 +25,10 @@ export const API_CHAT = `${API_BASE_URL}/chat`;
  * Check backend health, vector store chunk count, and Gemini API key status.
  */
 export async function checkSystemHealth() {
-  const response = await fetch(API_HEALTH);
+  // Header liveness must not depend on an expiring user session. Detailed
+  // /health diagnostics remain authenticated on the backend. Deliberately
+  // bypass authHeaders here so a damaged local session cannot imply an outage.
+  const response = await fetch(`${API_BASE_URL}/health/live`);
   if (!response.ok) {
     throw new Error(`Health check returned status ${response.status}`);
   }
@@ -276,7 +282,10 @@ export async function deleteLectureSlide(lectureId, slideId) {
 // ----------------- Quiz API -----------------
 export async function getCourseQuizzes(courseId) {
   const res = await apiFetch(`/courses/${courseId}/quizzes`);
-  if (!res.ok) throw new Error('Failed to load quizzes');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Could not load assessments (HTTP ${res.status}).`);
+  }
   return res.json();
 }
 
@@ -314,6 +323,36 @@ export async function getPublishedCourseQuizzes(courseId) {
 export async function submitQuizAttempt(courseId, quizId, questionId, data) {
   const res = await apiFetch(`/courses/${courseId}/quizzes/${quizId}/questions/${questionId}/attempts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
   if (!res.ok) throw new Error('Failed to submit answer');
+  return res.json();
+}
+
+export async function getCourseAgentRuns(courseId) {
+  const res = await apiFetch(`/courses/${courseId}/agent-runs`);
+  if (!res.ok) throw new Error('Failed to load agent runs');
+  return res.json();
+}
+
+export async function startCourseArchitect(courseId, data) {
+  const res = await apiFetch(`/courses/${courseId}/agent-runs/course-architect`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+  if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Course Architect could not start'); }
+  return res.json();
+}
+
+export async function getLatestCourseBlueprint(courseId) {
+  const res = await apiFetch(`/courses/${courseId}/blueprints/latest`);
+  if (!res.ok) throw new Error('Failed to load course blueprint');
+  return res.json();
+}
+
+export async function approveCourseBlueprint(courseId, blueprintId) {
+  const res = await apiFetch(`/courses/${courseId}/blueprints/${blueprintId}/approve`, { method: 'POST' });
+  if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Failed to approve course blueprint'); }
+  return res.json();
+}
+
+export async function produceBlueprintLessons(courseId, blueprintId) {
+  const res = await apiFetch(`/courses/${courseId}/blueprints/${blueprintId}/produce`, { method: 'POST' });
+  if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Lesson production failed'); }
   return res.json();
 }
 

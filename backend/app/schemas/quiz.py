@@ -35,6 +35,7 @@ class QuizRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str
     course_id: str
+    module_id: Optional[str] = None
     title: str
     status: str
     questions: List[QuizQuestionRead]

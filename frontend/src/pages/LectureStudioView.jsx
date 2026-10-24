@@ -38,6 +38,7 @@ export default function LectureStudioView({
   const [editTitle, setEditTitle] = useState('');
   const [editBullets, setEditBullets] = useState([]);
   const [editSpeakerNotes, setEditSpeakerNotes] = useState('');
+  const [showSpeakerNotes, setShowSpeakerNotes] = useState(false);
   const [isSavingSlide, setIsSavingSlide] = useState(false);
   const [slideSaveMsg, setSlideSaveMsg] = useState('');
 
@@ -430,19 +431,19 @@ export default function LectureStudioView({
                   </div>
                 </div>
 
-                {/* Speaker Notes */}
                 <div className="speaker-notes-section">
-                  <label className="field-label" htmlFor="speaker-notes-input">
-                    🎙️ Speaker Notes (Presenter Narrative)
-                  </label>
-                  <textarea
+                  <button type="button" className="notes-disclosure" onClick={() => setShowSpeakerNotes((visible) => !visible)} aria-expanded={showSpeakerNotes}>
+                    <span>🎙️ Presenter notes <small>Optional · used for teaching delivery and future narration</small></span>
+                    <span>{showSpeakerNotes ? 'Hide' : 'Show'}</span>
+                  </button>
+                  {showSpeakerNotes && <textarea
                     id="speaker-notes-input"
                     rows="3"
                     className="speaker-notes-textarea"
                     value={editSpeakerNotes}
                     onChange={(e) => setEditSpeakerNotes(e.target.value)}
-                    placeholder="Enter talking points for the presenter..."
-                  />
+                    placeholder="Optional presenter talking points — students do not see these on the slide."
+                  />}
                 </div>
 
                 {/* Grounded Citations Section */}

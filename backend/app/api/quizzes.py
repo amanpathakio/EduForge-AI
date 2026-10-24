@@ -75,6 +75,11 @@ def publish_quiz(course_id: str, quiz_id: str, db: Session = Depends(get_db), _c
     quiz = db.scalar(select(Quiz).where(Quiz.id == quiz_id, Quiz.course_id == course_id))
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found.")
+    if not quiz.questions:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This is an empty planning placeholder, not a reviewable assessment. Generate questions before publishing it.",
+        )
     quiz.status = "published"
     db.commit()
     db.refresh(quiz)

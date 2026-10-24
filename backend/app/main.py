@@ -34,8 +34,15 @@ app = FastAPI(
     version="1.1.0"
 )
 
-# Enable CORS for local development
-allowed_origins = [origin.strip() for origin in settings.FRONTEND_ORIGINS.split(",") if origin.strip()]
+# Permit the standard local Vite origins in addition to explicitly configured
+# deployment origins. This prevents a harmless Vite port change during local
+# development from making the authenticated API look "offline" in the UI.
+configured_origins = [origin.strip() for origin in settings.FRONTEND_ORIGINS.split(",") if origin.strip()]
+local_dev_origins = [
+    "http://localhost:5173", "http://127.0.0.1:5173",
+    "http://localhost:5174", "http://127.0.0.1:5174",
+]
+allowed_origins = list(dict.fromkeys([*configured_origins, *local_dev_origins]))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,

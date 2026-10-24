@@ -3,7 +3,7 @@ import { generateCourseQuiz, getCourseQuizzes, publishCourseQuiz } from '../serv
 
 const generationSteps = ['Retrieving course evidence', 'Designing questions at the right level', 'Preparing a reviewable draft'];
 
-export default function QuizPanel({ courseId }) {
+export default function QuizPanel({ courseId, onOpenCourseArchitect }) {
   const [quizzes, setQuizzes] = useState([]);
   const [topic, setTopic] = useState('');
   const [questionCount, setQuestionCount] = useState(5);
@@ -16,8 +16,8 @@ export default function QuizPanel({ courseId }) {
   const load = async () => {
     try {
       setQuizzes(await getCourseQuizzes(courseId));
-    } catch {
-      setError('The quiz service is unavailable. Start the backend to generate and publish quizzes.');
+    } catch (err) {
+      setError(err.message || 'The assessment service is unavailable. Check that the backend is running and that you are signed in.');
     }
   };
 
@@ -55,13 +55,20 @@ export default function QuizPanel({ courseId }) {
     }
   };
 
+  const reviewableQuizzes = quizzes.filter((quiz) => quiz.questions.length > 0);
+  const planningPlaceholders = quizzes.filter((quiz) => quiz.questions.length === 0);
+  const agentQuizzes = reviewableQuizzes.filter((quiz) => quiz.module_id);
+
   return (
     <div className="quiz-panel">
-      <div className="quiz-panel-head">
+      <div className="quiz-panel-head assessment-agent-head">
         <div>
           <span className="eyebrow">ASSESSMENT AGENT</span>
-          <h3>Generate a source-grounded quiz</h3>
-          <p>Choose the topic and difficulty. EduForge turns uploaded material into a professor-reviewable draft.</p>
+          <h3>Evidence in. Meaningful assessment out.</h3>
+          <p>Course Architect creates a draft assessment for every approved module. You stay in control of the final student release.</p>
+        </div>
+        <div className="assessment-agent-stat" aria-label={`${agentQuizzes.length} agent-produced assessment drafts`}>
+          <b>{agentQuizzes.length}</b><span>agent-produced<br />draft{agentQuizzes.length === 1 ? '' : 's'}</span>
         </div>
       </div>
 
@@ -71,7 +78,7 @@ export default function QuizPanel({ courseId }) {
         <form className="quiz-generator glass-card" onSubmit={generate}>
           <div className="agent-form-heading">
             <span className="agent-pulse" aria-hidden="true" />
-            <div><h4>Build from your course evidence</h4><p>Nothing is shared with students until you approve it.</p></div>
+            <div><h4>Direct Quiz Builder</h4><p>Need a targeted check? Ask the assessment agent for one. Nothing is shared until you approve it.</p></div>
           </div>
           <label>
             What should students be assessed on?
@@ -105,16 +112,23 @@ export default function QuizPanel({ courseId }) {
         <div className="quiz-list">
           {quizzes.length === 0 ? (
             <div className="quiz-empty glass-card">
-              <strong>Your assessment workspace is ready.</strong>
-              <p>Upload course material first, then generate a quiz from a topic it covers.</p>
+              <span className="quiz-empty-kicker">NO MODULE ASSESSMENTS YET</span>
+              <strong>Let Course Architect create the first assessment set.</strong>
+              <p>It maps your uploaded material into modules, then Lesson Producer creates one source-grounded quiz draft per approved module.</p>
+              <button type="button" className="button button-secondary" onClick={onOpenCourseArchitect}>Open Course Architect →</button>
             </div>
-          ) : quizzes.map((quiz) => {
+          ) : <>
+            {planningPlaceholders.length > 0 && <div className="quiz-placeholder-note">
+              <span aria-hidden="true">i</span><p><b>{planningPlaceholders.length} old planning {planningPlaceholders.length === 1 ? 'placeholder is' : 'placeholders are'} hidden from review.</b> They contain no questions and cannot be published. New Course Architect runs create complete drafts instead.</p>
+            </div>}
+            {reviewableQuizzes.map((quiz) => {
             const citedQuestions = quiz.questions.filter((question) => question.source_page).length;
+            const agentProduced = Boolean(quiz.module_id);
             return (
-              <article className="quiz-card glass-card" key={quiz.id}>
-                <div className="quiz-card-top"><span className={`badge ${quiz.status === 'published' ? 'quiz-published' : 'lec-badge'}`}>{quiz.status}</span><span className="quiz-ai-label">AI draft</span></div>
+              <article className={`quiz-card glass-card ${agentProduced ? 'quiz-card-agent' : ''}`} key={quiz.id}>
+                <div className="quiz-card-top"><span className={`badge ${quiz.status === 'published' ? 'quiz-published' : 'lec-badge'}`}>{quiz.status}</span><span className="quiz-ai-label">{agentProduced ? 'Course Architect output' : 'Direct Quiz Builder'}</span></div>
                 <h4>{quiz.title}</h4>
-                <p>{quiz.questions.length} questions · {citedQuestions || quiz.questions.length} source-linked · professor review required</p>
+                <p>{quiz.questions.length} questions · {citedQuestions || quiz.questions.length} source-linked · {quiz.status === 'published' ? 'available to students' : 'professor review required'}</p>
                 <div className="quiz-card-actions">
                   <button className="text-action" onClick={() => setExpandedQuizId(expandedQuizId === quiz.id ? null : quiz.id)}>{expandedQuizId === quiz.id ? 'Hide draft' : 'Review questions'}</button>
                   {quiz.status !== 'published' && <button className="button button-secondary" onClick={() => publish(quiz.id)} disabled={publishingId === quiz.id}>{publishingId === quiz.id ? 'Publishing…' : 'Approve & publish to students'}</button>}
@@ -129,7 +143,8 @@ export default function QuizPanel({ courseId }) {
                 </div>}
               </article>
             );
-          })}
+            })}
+          </>}
         </div>
       </div>
     </div>

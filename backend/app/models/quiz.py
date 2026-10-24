@@ -14,6 +14,7 @@ class Quiz(Base):
     __tablename__ = "quizzes"
     id = Column(String(36), primary_key=True, default=_uuid)
     course_id = Column(String(36), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False, index=True)
+    module_id = Column(String(36), nullable=True, index=True)
     title = Column(String(255), nullable=False)
     status = Column(String(24), nullable=False, default="draft")  # draft | published
     created_at = Column(DateTime(timezone=True), default=_now)

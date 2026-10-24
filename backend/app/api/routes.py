@@ -45,6 +45,15 @@ class HealthResponse(BaseModel):
     total_indexed_chunks: int
     gemini_api_key_configured: bool
 
+class LivenessResponse(BaseModel):
+    """Deliberately minimal, public process liveness response."""
+    status: str
+
+@router.get("/health/live", response_model=LivenessResponse)
+def liveness_check():
+    """Public liveness only; detailed service diagnostics remain authenticated."""
+    return LivenessResponse(status="healthy")
+
 @router.get("/health", response_model=HealthResponse)
 def health_check(_user=Depends(get_current_user)):
     """

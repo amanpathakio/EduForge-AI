@@ -1,6 +1,6 @@
 import logging
 from typing import List
-from fastapi import APIRouter, Depends, UploadFile, File, status, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, UploadFile, File, status, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -13,10 +13,38 @@ from app.rag.embeddings import EmbeddingError
 from app.rag.vector_store import VectorStoreError
 from app.auth import get_current_user, require_roles, require_course_access, require_course_manager
 from app.models.auth import Profile
+from app.schemas.agent import CourseArchitectRequest, AgentRunRead
+from app.services.agent_service import AgentService
+from app.schemas.blueprint import CourseBlueprintRead
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/courses", tags=["Courses"])
+
+@router.get("/{course_id}/agent-runs", response_model=List[AgentRunRead])
+def list_agent_runs(course_id: str, db: Session = Depends(get_db), _course=Depends(require_course_access)):
+    """Visible, auditable history of agent work for an authorized course member."""
+    return AgentService.recent_runs(db, course_id)
+
+@router.post("/{course_id}/agent-runs/course-architect", response_model=AgentRunRead, status_code=status.HTTP_201_CREATED)
+def start_course_architect(course_id: str, request: CourseArchitectRequest, db: Session = Depends(get_db), user: Profile = Depends(get_current_user), _course=Depends(require_course_manager)):
+    """Professor-controlled agent run; it plans but never publishes student-facing content."""
+    return AgentService.run_course_architect(db, course_id, user.id, request.goal)
+
+@router.get("/{course_id}/blueprints/latest", response_model=CourseBlueprintRead | None)
+def get_latest_blueprint(course_id: str, db: Session = Depends(get_db), _course=Depends(require_course_access)):
+    return AgentService.latest_blueprint(db, course_id)
+
+@router.post("/{course_id}/blueprints/{blueprint_id}/approve", response_model=CourseBlueprintRead)
+def approve_blueprint(course_id: str, blueprint_id: str, db: Session = Depends(get_db), _course=Depends(require_course_manager)):
+    return AgentService.approve_blueprint(db, course_id, blueprint_id)
+
+@router.post("/{course_id}/blueprints/{blueprint_id}/produce", response_model=AgentRunRead, status_code=status.HTTP_201_CREATED)
+def produce_blueprint(course_id: str, blueprint_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db), user: Profile = Depends(get_current_user), _course=Depends(require_course_manager)):
+    """Queue full lecture and quiz drafts without making the professor wait for model calls."""
+    run = AgentService.queue_blueprint_production(db, course_id, blueprint_id, user.id)
+    background_tasks.add_task(AgentService.run_queued_blueprint_production, run.id, blueprint_id)
+    return run
 
 @router.post("", response_model=CourseRead, status_code=status.HTTP_201_CREATED)
 def create_course(course_in: CourseCreate, db: Session = Depends(get_db), user: Profile = Depends(require_roles("professor", "admin"))):

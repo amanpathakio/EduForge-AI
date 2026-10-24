@@ -72,8 +72,6 @@ def _validate_lecture_quality(lecture: LLMLectureOutput, requested_slide_count: 
     for index, slide in enumerate(lecture.slides, 1):
         if not slide.cited_chunk_indices:
             issues.append(f"slide {index} has no source citation")
-        if not slide.speaker_notes.strip():
-            issues.append(f"slide {index} has no presenter notes")
         if len(slide.content) > 4:
             issues.append(f"slide {index} is too dense ({len(slide.content)} bullets)")
     if issues:
@@ -204,7 +202,7 @@ STRICT GROUNDING RULES:
 6. Build a deliberate arc: orient learners, explain the core idea, develop it with a source-supported example or comparison when available, then consolidate with a recap or check-for-understanding.
 7. Give each slide ONE teaching job. Avoid repeating the same definition or using generic filler such as "understand the importance of".
 8. Keep slide content presentation-ready: 2–4 short, concrete bullets; use parallel phrasing; put explanation, transitions, and teaching questions in speaker_notes.
-9. For every slide, speaker_notes must explain why the slide appears at this point in the lesson and include a useful presenter transition or question.
+9. Speaker notes are optional presenter guidance. Add them only when a useful transition, teaching question, or delivery cue adds value beyond the visible slide.
 
 COURSE CONTEXT CHUNKS:
 {full_context}

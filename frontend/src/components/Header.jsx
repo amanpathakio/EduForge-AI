@@ -18,7 +18,7 @@ export default function Header({ status, onLogout }) {
   return (
     <header className="app-header">
       <div className="header-left">
-        <span className="workspace-crumb"><i /> Workspace <b>/</b> Teaching studio</span>
+        <span className="workspace-crumb"><i /> EduForge <b>/</b> Educator workspace</span>
       </div>
 
       <div className="header-right">

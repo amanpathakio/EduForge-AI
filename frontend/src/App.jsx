@@ -46,8 +46,8 @@ export default function App() {
     try {
       const data = await checkSystemHealth();
       setHealthStatus('online');
-      setChunkCount(data.total_indexed_chunks || 0);
-      setGeminiConfigured(Boolean(data.gemini_api_key_configured));
+      if (typeof data.total_indexed_chunks === 'number') setChunkCount(data.total_indexed_chunks);
+      if (typeof data.gemini_api_key_configured === 'boolean') setGeminiConfigured(data.gemini_api_key_configured);
     } catch (error) {
       console.warn('Backend health check error:', error.message);
       setHealthStatus('offline');

@@ -15,6 +15,7 @@ class Lecture(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     course_id = Column(String(36), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False, index=True)
+    module_id = Column(String(36), nullable=True, index=True)
     title = Column(String(255), nullable=False)
     topic = Column(String(255), nullable=False)
     duration_minutes = Column(Integer, default=60)

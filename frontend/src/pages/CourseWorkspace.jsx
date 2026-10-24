@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import UploadPanel from '../components/UploadPanel';
 import ChatPanel from '../components/ChatPanel';
 import QuizPanel from '../components/QuizPanel';
+import CourseArchitectPanel from '../components/CourseArchitectPanel';
 import {
   getCourseDocuments,
   uploadCourseDocument,
@@ -125,6 +126,7 @@ export default function CourseWorkspace({
         >
           🎙️ Lectures ({lectures.length})
         </button>
+        <button className={`tab-btn ${activeTab === 'architect' ? 'active' : ''}`} onClick={() => setActiveTab('architect')}>✦ Course Architect</button>
         <button className={`tab-btn ${activeTab === 'quizzes' ? 'active' : ''}`} onClick={() => setActiveTab('quizzes')}>✓ Quizzes</button>
       </div>
 
@@ -174,9 +176,17 @@ export default function CourseWorkspace({
                 <p>Synthesize grounded, slide-by-slide lectures with speaker notes and citations.</p>
                 <span className="action-link">Open Studio →</span>
               </div>
+              <div className="action-card glass-card" onClick={() => setActiveTab('architect')}>
+                <div className="action-icon">✦</div>
+                <h3>Course Architect</h3>
+                <p>Plan modules from your evidence, then create lecture and quiz drafts in a controlled agent run.</p>
+                <span className="action-link">Open Agent →</span>
+              </div>
             </div>
           </div>
         )}
+
+        {activeTab === 'architect' && <CourseArchitectPanel courseId={course.id} documentCount={documents.length} onOpenQuizzes={() => setActiveTab('quizzes')} />}
 
         {/* DOCUMENTS TAB */}
         {activeTab === 'documents' && (
@@ -301,7 +311,7 @@ export default function CourseWorkspace({
             )}
           </div>
         )}
-        {activeTab === 'quizzes' && <QuizPanel courseId={course.id} />}
+        {activeTab === 'quizzes' && <QuizPanel courseId={course.id} onOpenCourseArchitect={() => setActiveTab('architect')} />}
       </div>
     </div>
   );
