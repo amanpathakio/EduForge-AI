@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = ""
     SUPABASE_JWT_AUDIENCE: str = "authenticated"
     SUPABASE_JWKS_URL: str = ""
+    # Built-in production JWT & educator onboarding settings
+    JWT_SECRET_KEY: str = ""
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
+    EDUCATOR_ACCESS_CODE: str = ""
     AUTH_REQUIRED: bool = True
     FRONTEND_ORIGINS: str = "http://localhost:5173"
 
@@ -36,6 +41,23 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore"
     )
+
+    def get_jwt_secret(self) -> str:
+        """Return configured JWT secret or persist a cryptographically random local secret."""
+        if self.JWT_SECRET_KEY:
+            return self.JWT_SECRET_KEY
+        secret_file = BASE_DIR / "data" / ".jwt_secret"
+        secret_file.parent.mkdir(parents=True, exist_ok=True)
+        if secret_file.exists():
+            stored = secret_file.read_text(encoding="utf-8").strip()
+            if stored:
+                self.JWT_SECRET_KEY = stored
+                return stored
+        import secrets
+        generated = secrets.token_urlsafe(48)
+        secret_file.write_text(generated, encoding="utf-8")
+        self.JWT_SECRET_KEY = generated
+        return generated
 
     def validate_directories(self) -> None:
         """Ensure necessary directories exist on filesystem."""

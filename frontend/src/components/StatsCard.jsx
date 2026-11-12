@@ -23,15 +23,15 @@ export default function StatsCard({ chunkCount = 0 }) {
           </span>
         </div>
         <div className="stat-item">
-          <span className="stat-label">DB Storage Path</span>
+          <span className="stat-label">Vault Storage</span>
           <span id="stat-db-path" className="stat-value-sub">
-            chroma_db
+            Course-Isolated
           </span>
         </div>
         <div className="stat-item">
-          <span className="stat-label">Embedding Model</span>
+          <span className="stat-label">Index Precision</span>
           <span className="stat-value-sub text-highlight">
-            bge-small-en-v1.5
+            Semantic High-Recall
           </span>
         </div>
         <div className="stat-item">

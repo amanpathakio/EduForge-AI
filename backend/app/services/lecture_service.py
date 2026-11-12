@@ -82,10 +82,15 @@ def _validate_lecture_quality(lecture: LLMLectureOutput, requested_slide_count: 
 
 class LectureService:
     @staticmethod
-    def get_lectures_for_course(db: Session, course_id: str) -> List[LectureSummaryRead]:
-        lectures = db.scalars(
-            select(Lecture).where(Lecture.course_id == course_id).order_by(Lecture.created_at.desc())
-        ).all()
+    def get_lectures_for_course(
+        db: Session,
+        course_id: str,
+        include_drafts: bool = True,
+    ) -> List[LectureSummaryRead]:
+        query = select(Lecture).where(Lecture.course_id == course_id)
+        if not include_drafts:
+            query = query.where(Lecture.status == "published")
+        lectures = db.scalars(query.order_by(Lecture.created_at.desc())).all()
 
         results = []
         for lec in lectures:
@@ -108,10 +113,16 @@ class LectureService:
         return results
 
     @staticmethod
-    def get_lecture_with_slides(db: Session, lecture_id: str) -> LectureRead:
+    def get_lecture_with_slides(
+        db: Session,
+        lecture_id: str,
+        allow_draft: bool = True,
+    ) -> LectureRead:
         lecture = db.scalar(select(Lecture).where(Lecture.id == lecture_id))
         if not lecture:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Lecture '{lecture_id}' not found.")
+        if not allow_draft and lecture.status != "published":
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lecture not found.")
 
         # Load citations for all slides
         slide_ids = [s.id for s in lecture.slides]
@@ -331,6 +342,20 @@ REQUIRED JSON SCHEMA:
         if update_in.additional_instructions is not None:
             lecture.additional_instructions = update_in.additional_instructions
 
+        db.commit()
+        return LectureService.get_lecture_with_slides(db, lecture_id)
+
+    @staticmethod
+    def publish_lecture(db: Session, lecture_id: str) -> LectureRead:
+        lecture = db.scalar(select(Lecture).where(Lecture.id == lecture_id))
+        if not lecture:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Lecture '{lecture_id}' not found.")
+        if not lecture.slides:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Cannot publish an empty lecture without slides.",
+            )
+        lecture.status = "published"
         db.commit()
         return LectureService.get_lecture_with_slides(db, lecture_id)
 

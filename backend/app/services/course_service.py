@@ -1,6 +1,9 @@
 import os
+import secrets
 import shutil
+import string
 import logging
+from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import UploadFile, HTTPException, status
 from sqlalchemy.orm import Session
@@ -9,7 +12,16 @@ from sqlalchemy import select, func
 from app.models.course import Course
 from app.models.document import Document
 from app.models.lecture import Lecture
-from app.schemas.course import CourseCreate, CourseUpdate, CourseRead, DocumentRead
+from app.models.auth import Profile, CourseMembership, CourseInvite
+from app.models.quiz import Quiz, QuizQuestion, QuizAttempt
+from app.schemas.course import (
+    CourseCreate,
+    CourseUpdate,
+    CourseRead,
+    DocumentRead,
+    CourseInviteRead,
+    CourseStudentRead,
+)
 from app.config import settings
 from app.rag.document_loader import extract_text_from_pdf, PDFExtractionError
 from app.rag.chunker import create_chunks
@@ -20,28 +32,58 @@ logger = logging.getLogger(__name__)
 
 class CourseService:
     @staticmethod
+    def _resolve_course_role(db: Session, course: Course, user_id: Optional[str], is_admin: bool = False) -> str:
+        if is_admin or (user_id and course.owner_id == user_id):
+            return "professor"
+        if user_id:
+            membership = db.scalar(
+                select(CourseMembership).where(
+                    CourseMembership.course_id == course.id,
+                    CourseMembership.user_id == user_id,
+                )
+            )
+            if membership and membership.role == "professor":
+                return "professor"
+        return "student"
+
+    @staticmethod
+    def _build_course_read(db: Session, c: Course, user_id: Optional[str], is_admin: bool = False) -> CourseRead:
+        role = CourseService._resolve_course_role(db, c, user_id, is_admin)
+        doc_count = db.scalar(select(func.count(Document.id)).where(Document.course_id == c.id)) or 0
+        pub_lec_count = (
+            db.scalar(
+                select(func.count(Lecture.id)).where(
+                    Lecture.course_id == c.id,
+                    Lecture.status == "published",
+                )
+            )
+            or 0
+        )
+        if role == "professor":
+            lec_count = db.scalar(select(func.count(Lecture.id)).where(Lecture.course_id == c.id)) or 0
+        else:
+            lec_count = pub_lec_count
+        return CourseRead(
+            id=c.id,
+            title=c.title,
+            description=c.description or "",
+            created_at=c.created_at,
+            updated_at=c.updated_at,
+            document_count=doc_count,
+            lecture_count=lec_count,
+            published_lecture_count=pub_lec_count,
+            my_role=role,
+        )
+
+    @staticmethod
     def get_courses(db: Session, user_id: str = None, is_admin: bool = False) -> List[CourseRead]:
         statement = select(Course).order_by(Course.created_at.desc())
         if user_id and not is_admin:
-            from app.models.auth import CourseMembership
-            statement = statement.outerjoin(CourseMembership).where((Course.owner_id == user_id) | (CourseMembership.user_id == user_id))
-        courses = db.scalars(statement).unique().all()
-        result = []
-        for c in courses:
-            doc_count = db.scalar(select(func.count(Document.id)).where(Document.course_id == c.id)) or 0
-            lec_count = db.scalar(select(func.count(Lecture.id)).where(Lecture.course_id == c.id)) or 0
-            result.append(
-                CourseRead(
-                    id=c.id,
-                    title=c.title,
-                    description=c.description or "",
-                    created_at=c.created_at,
-                    updated_at=c.updated_at,
-                    document_count=doc_count,
-                    lecture_count=lec_count
-                )
+            statement = statement.outerjoin(CourseMembership).where(
+                (Course.owner_id == user_id) | (CourseMembership.user_id == user_id)
             )
-        return result
+        courses = db.scalars(statement).unique().all()
+        return [CourseService._build_course_read(db, c, user_id, is_admin) for c in courses]
 
     @staticmethod
     def get_course(db: Session, course_id: str) -> Course:
@@ -51,19 +93,14 @@ class CourseService:
         return course
 
     @staticmethod
-    def get_course_read(db: Session, course_id: str) -> CourseRead:
+    def get_course_read(
+        db: Session,
+        course_id: str,
+        user_id: Optional[str] = None,
+        is_admin: bool = False,
+    ) -> CourseRead:
         course = CourseService.get_course(db, course_id)
-        doc_count = db.scalar(select(func.count(Document.id)).where(Document.course_id == course.id)) or 0
-        lec_count = db.scalar(select(func.count(Lecture.id)).where(Lecture.course_id == course.id)) or 0
-        return CourseRead(
-            id=course.id,
-            title=course.title,
-            description=course.description or "",
-            created_at=course.created_at,
-            updated_at=course.updated_at,
-            document_count=doc_count,
-            lecture_count=lec_count
-        )
+        return CourseService._build_course_read(db, course, user_id, is_admin)
 
     @staticmethod
     def create_course(db: Session, course_in: CourseCreate, owner_id: str) -> Course:
@@ -180,3 +217,133 @@ class CourseService:
         except Exception as e:
             logger.exception(f"Unexpected upload failure: {str(e)}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Upload failed: {str(e)}")
+
+    @staticmethod
+    def _generate_invite_code(db: Session) -> str:
+        alphabet = string.ascii_uppercase + string.digits
+        for _ in range(10):
+            token = "".join(secrets.choice(alphabet) for _ in range(6))
+            code = f"EF-{token}"
+            if not db.scalar(select(CourseInvite).where(CourseInvite.code == code)):
+                return code
+        raise HTTPException(status_code=500, detail="Could not generate unique invite code.")
+
+    @staticmethod
+    def list_course_invites(db: Session, course_id: str) -> List[CourseInviteRead]:
+        CourseService.get_course(db, course_id)
+        invites = db.scalars(
+            select(CourseInvite)
+            .where(CourseInvite.course_id == course_id, CourseInvite.is_active.is_(True))
+            .order_by(CourseInvite.created_at.desc())
+        ).all()
+        return [CourseInviteRead.model_validate(inv) for inv in invites]
+
+    @staticmethod
+    def create_course_invite(db: Session, course_id: str, created_by: str) -> CourseInviteRead:
+        CourseService.get_course(db, course_id)
+        invite = CourseInvite(
+            course_id=course_id,
+            code=CourseService._generate_invite_code(db),
+            created_by=created_by,
+            is_active=True,
+        )
+        db.add(invite)
+        db.commit()
+        db.refresh(invite)
+        return CourseInviteRead.model_validate(invite)
+
+    @staticmethod
+    def revoke_course_invite(db: Session, course_id: str, invite_id: str) -> None:
+        invite = db.scalar(
+            select(CourseInvite).where(CourseInvite.id == invite_id, CourseInvite.course_id == course_id)
+        )
+        if not invite:
+            raise HTTPException(status_code=404, detail="Invite code not found.")
+        invite.is_active = False
+        db.commit()
+
+    @staticmethod
+    def join_course_by_code(db: Session, raw_code: str, user: Profile) -> CourseRead:
+        normalized = raw_code.strip().upper()
+        invite = db.scalar(
+            select(CourseInvite).where(CourseInvite.code == normalized, CourseInvite.is_active.is_(True))
+        )
+        if not invite:
+            raise HTTPException(status_code=404, detail="Invalid or inactive course invite code.")
+        if invite.expires_at and invite.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+            raise HTTPException(status_code=410, detail="This course invite code has expired.")
+
+        course = CourseService.get_course(db, invite.course_id)
+        existing = db.scalar(
+            select(CourseMembership).where(
+                CourseMembership.course_id == course.id,
+                CourseMembership.user_id == user.id,
+            )
+        )
+        if not existing and course.owner_id != user.id:
+            db.add(CourseMembership(course_id=course.id, user_id=user.id, role="student"))
+            invite.uses_count = (invite.uses_count or 0) + 1
+            db.commit()
+
+        return CourseService.get_course_read(db, course.id, user.id, user.role == "admin")
+
+    @staticmethod
+    def list_course_students(db: Session, course_id: str) -> List[CourseStudentRead]:
+        CourseService.get_course(db, course_id)
+        rows = db.execute(
+            select(CourseMembership, Profile)
+            .join(Profile, Profile.id == CourseMembership.user_id)
+            .where(CourseMembership.course_id == course_id, CourseMembership.role == "student")
+            .order_by(CourseMembership.created_at.desc())
+        ).all()
+
+        results: List[CourseStudentRead] = []
+        for membership, profile in rows:
+            attempts = (
+                db.scalar(
+                    select(func.count(QuizAttempt.id))
+                    .join(QuizQuestion, QuizQuestion.id == QuizAttempt.question_id)
+                    .join(Quiz, Quiz.id == QuizQuestion.quiz_id)
+                    .where(Quiz.course_id == course_id, QuizAttempt.learner_id == profile.id)
+                )
+                or 0
+            )
+            correct = (
+                db.scalar(
+                    select(func.count(QuizAttempt.id))
+                    .join(QuizQuestion, QuizQuestion.id == QuizAttempt.question_id)
+                    .join(Quiz, Quiz.id == QuizQuestion.quiz_id)
+                    .where(
+                        Quiz.course_id == course_id,
+                        QuizAttempt.learner_id == profile.id,
+                        QuizAttempt.is_correct.is_(True),
+                    )
+                )
+                or 0
+            )
+            results.append(
+                CourseStudentRead(
+                    user_id=profile.id,
+                    email=profile.email,
+                    full_name=profile.full_name,
+                    role=membership.role,
+                    joined_at=membership.created_at,
+                    quiz_attempts_count=attempts,
+                    correct_answers_count=correct,
+                )
+            )
+        return results
+
+    @staticmethod
+    def remove_course_student(db: Session, course_id: str, user_id: str) -> None:
+        membership = db.scalar(
+            select(CourseMembership).where(
+                CourseMembership.course_id == course_id,
+                CourseMembership.user_id == user_id,
+                CourseMembership.role == "student",
+            )
+        )
+        if not membership:
+            raise HTTPException(status_code=404, detail="Student enrollment not found.")
+        db.delete(membership)
+        db.commit()

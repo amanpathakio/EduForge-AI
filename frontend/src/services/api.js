@@ -6,11 +6,11 @@
 // vite.config.js. It avoids browser CORS/network differences between
 // localhost and 127.0.0.1. Production uses the explicitly configured API.
 const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || '');
-import { supabase } from '../lib/supabase';
+import { getAccessToken } from '../lib/auth';
 
 async function authHeaders(extra = {}) {
-  const { data } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
-  return data.session?.access_token ? { ...extra, Authorization: `Bearer ${data.session.access_token}` } : extra;
+  const token = getAccessToken();
+  return token ? { ...extra, Authorization: `Bearer ${token}` } : extra;
 }
 
 async function apiFetch(path, options = {}) {
@@ -25,9 +25,17 @@ export const API_CHAT = `${API_BASE_URL}/chat`;
  * Check backend health, vector store chunk count, and Gemini API key status.
  */
 export async function checkSystemHealth() {
-  // Header liveness must not depend on an expiring user session. Detailed
-  // /health diagnostics remain authenticated on the backend. Deliberately
-  // bypass authHeaders here so a damaged local session cannot imply an outage.
+  // Check detailed /health when authenticated so total_indexed_chunks and Gemini key
+  // status stay populated, falling back to public /health/live if unauthenticated
+  // or if an expiring session returns 401/403.
+  const headers = await authHeaders();
+  if (headers.Authorization) {
+    const authedRes = await fetch(`${API_BASE_URL}/health`, { headers });
+    if (authedRes.ok) {
+      return authedRes.json();
+    }
+  }
+
   const response = await fetch(`${API_BASE_URL}/health/live`);
   if (!response.ok) {
     throw new Error(`Health check returned status ${response.status}`);
@@ -369,4 +377,72 @@ export async function regenerateLectureSlide(lectureId, slideId, instruction) {
   }
 
   return res.json();
+}
+
+export async function publishLecture(lectureId) {
+  const res = await apiFetch(`/lectures/${lectureId}/publish`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to publish lecture');
+  }
+  return res.json();
+}
+
+// ----------------- Stage 2: Course Invites & Roster -----------------
+export async function joinCourseByInviteCode(code) {
+  const res = await apiFetch('/courses/join', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Invalid or inactive course invite code');
+  }
+  return res.json();
+}
+
+export async function getCourseInvites(courseId) {
+  const res = await apiFetch(`/courses/${courseId}/invites`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to load course invite codes');
+  }
+  return res.json();
+}
+
+export async function createCourseInvite(courseId) {
+  const res = await apiFetch(`/courses/${courseId}/invites`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to generate invite code');
+  }
+  return res.json();
+}
+
+export async function revokeCourseInvite(courseId, inviteId) {
+  const res = await apiFetch(`/courses/${courseId}/invites/${inviteId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to revoke invite code');
+  }
+  return true;
+}
+
+export async function getCourseStudents(courseId) {
+  const res = await apiFetch(`/courses/${courseId}/students`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to load course roster');
+  }
+  return res.json();
+}
+
+export async function removeCourseStudent(courseId, userId) {
+  const res = await apiFetch(`/courses/${courseId}/students/${userId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to remove student');
+  }
+  return true;
 }

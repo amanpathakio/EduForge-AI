@@ -1,15 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { getCourseAgentRuns, startCourseArchitect, getLatestCourseBlueprint, approveCourseBlueprint, produceBlueprintLessons } from '../services/api';
 
 export default function CourseArchitectPanel({ courseId, documentCount, onOpenQuizzes }) {
   const [runs, setRuns] = useState([]); const [blueprint, setBlueprint] = useState(null); const [goal, setGoal] = useState('Map the material into a clear learning journey with teachable modules.'); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
-  const load = async () => { try { const [history, latest] = await Promise.all([getCourseAgentRuns(courseId), getLatestCourseBlueprint(courseId)]); setRuns(history); setBlueprint(latest); } catch { setRuns([]); } };
-  useEffect(() => { load(); }, [courseId]);
+  const load = useCallback(async () => { try { const [history, latest] = await Promise.all([getCourseAgentRuns(courseId), getLatestCourseBlueprint(courseId)]); setRuns(history); setBlueprint(latest); } catch { setRuns([]); } }, [courseId]);
+  useEffect(() => { load(); }, [load]);
   useEffect(() => {
     if (!runs.some((item) => item.status === 'queued' || item.status === 'running')) return undefined;
     const interval = window.setInterval(load, 2500);
     return () => window.clearInterval(interval);
-  }, [runs, courseId]);
+  }, [runs, load]);
   const run = async () => { try { setBusy(true); setError(''); const created = await startCourseArchitect(courseId, { goal }); setRuns((current) => [created, ...current]); await load(); } catch (e) { setError(e.message); } finally { setBusy(false); } };
   const approve = async () => { try { setBusy(true); setBlueprint(await approveCourseBlueprint(courseId, blueprint.id)); } catch (e) { setError(e.message); } finally { setBusy(false); } };
   const produce = async () => { try { setBusy(true); setError(''); const queued = await produceBlueprintLessons(courseId, blueprint.id); setRuns((current) => [queued, ...current]); } catch (e) { setError(e.message); } finally { setBusy(false); } };

@@ -176,7 +176,7 @@ export default function UploadPanel({ onUploadSuccess, customUploader }) {
                   strokeDasharray="45"
                 ></circle>
               </svg>
-              Extracting pages, chunking text, and indexing in ChromaDB...
+              Extracting pages, chunking text, and indexing into the course vault...
             </p>
           )}
         </div>

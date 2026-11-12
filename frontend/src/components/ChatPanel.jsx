@@ -75,7 +75,7 @@ export default function ChatPanel({
       const errorMsg = {
         id: `err-${Date.now()}`,
         sender: 'assistant',
-        text: `⚠️ **Error:** ${error.message}. Please verify the backend logs and check that your Gemini API key is configured properly.`,
+        text: `⚠️ **Error:** ${error.message}. Unable to complete answer synthesis right now. Please try again in a moment.`,
         sources: [],
         chunks: [],
       };

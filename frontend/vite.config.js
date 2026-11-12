@@ -8,6 +8,7 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
+      '/auth': 'http://127.0.0.1:8010',
       '/health': 'http://127.0.0.1:8010',
       '/documents': 'http://127.0.0.1:8010',
       '/chat': 'http://127.0.0.1:8010',

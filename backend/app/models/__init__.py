@@ -3,7 +3,7 @@ from app.models.document import Document
 from app.models.lecture import Lecture, LectureSlide
 from app.models.citation import Citation
 from app.models.quiz import Quiz, QuizQuestion
-from app.models.auth import Profile, CourseMembership
+from app.models.auth import Profile, CourseMembership, CourseInvite
 from app.models.agent import AgentRun, AgentRunStep
 from app.models.blueprint import CourseBlueprint, CourseModule
 
@@ -13,5 +13,5 @@ __all__ = [
     "Lecture",
     "LectureSlide",
     "Citation"
-    ,"Quiz", "QuizQuestion", "Profile", "CourseMembership", "AgentRun", "AgentRunStep", "CourseBlueprint", "CourseModule"
+    ,"Quiz", "QuizQuestion", "Profile", "CourseMembership", "CourseInvite", "AgentRun", "AgentRunStep", "CourseBlueprint", "CourseModule"
 ]

@@ -3,6 +3,7 @@ import Header from './components/Header';
 import ApiKeyWarning from './components/ApiKeyWarning';
 import SidebarNav from './components/SidebarNav';
 import CitationDrawer from './components/CitationDrawer';
+import LandingPage from './components/LandingPage';
 
 // Pages
 import DashboardOverview from './pages/DashboardOverview';
@@ -13,19 +14,103 @@ import DocumentsView from './pages/DocumentsView';
 import StudentTutor from './pages/StudentTutor';
 import StudentLearningView from './pages/StudentLearningView';
 
-import { checkSystemHealth, getCourses, createCourse, deleteCourse } from './services/api';
+import { checkSystemHealth, getCourses, createCourse, deleteCourse, joinCourseByInviteCode } from './services/api';
 import AuthScreen from './components/AuthScreen';
-import { supabase, isSupabaseConfigured } from './lib/supabase';
+import { getSession, signOut, onAuthStateChange } from './lib/auth';
+
+function parsePublicRoute(pathname) {
+  const path = (pathname || '/').toLowerCase();
+  if (path === '/signup' || path === '/register') return { showAuth: true, mode: 'signup' };
+  if (path === '/reset' || path === '/forgot-password') return { showAuth: true, mode: 'reset' };
+  if (
+    path === '/login' ||
+    path === '/signin' ||
+    path.startsWith('/dashboard') ||
+    path.startsWith('/courses') ||
+    path.startsWith('/studio') ||
+    path.startsWith('/documents') ||
+    path.startsWith('/ask-ai') ||
+    path.startsWith('/student-learning')
+  ) {
+    return { showAuth: true, mode: 'login' };
+  }
+  return { showAuth: false, mode: 'login' };
+}
+
+function getInitialTheme() {
+  try {
+    const stored = localStorage.getItem('eduforge-theme-v2');
+    if (stored === 'dark' || stored === 'light') return stored;
+  } catch {
+    // Ignore storage access errors in private browsing
+  }
+  return 'dark';
+}
 
 export default function App() {
+  const [theme, setTheme] = useState(getInitialTheme);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem('eduforge-theme-v2', theme);
+    } catch {
+      // Ignore storage access errors
+    }
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  }, []);
+
+  const [publicRoute, setPublicRoute] = useState(() => parsePublicRoute(window.location.pathname));
+  useEffect(() => {
+    const onPopState = () => setPublicRoute(parsePublicRoute(window.location.pathname));
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const navigatePublicAuth = useCallback((mode = 'login') => {
+    const targetPath = mode === 'signup' ? '/signup' : mode === 'reset' ? '/reset' : '/login';
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({}, '', targetPath);
+    }
+    setPublicRoute({ showAuth: true, mode });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const navigateBackToLanding = useCallback(() => {
+    if (window.location.pathname !== '/') {
+      window.history.pushState({}, '', '/');
+    }
+    setPublicRoute({ showAuth: false, mode: 'login' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   const [session, setSession] = useState(undefined);
   useEffect(() => {
-    if (!supabase) { setSession(null); return undefined; }
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
-    return () => subscription.unsubscribe();
+    let active = true;
+    getSession().then((resolved) => {
+      if (active) setSession(resolved);
+    });
+    const unsubscribe = onAuthStateChange((nextSession) => {
+      setSession(nextSession);
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'courses' | 'course-workspace' | 'ask-ai' | 'studio' | 'documents'
+
+  const currentUser = session?.user || null;
+  const isEducator = currentUser?.role === 'professor' || currentUser?.role === 'admin';
+
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'courses' | 'course-workspace' | 'ask-ai' | 'student-learning' | 'studio' | 'documents'
+  useEffect(() => {
+    if (!currentUser) return;
+    if (!isEducator && ['dashboard', 'studio', 'documents'].includes(currentView)) {
+      setCurrentView('student-learning');
+    }
+  }, [currentUser, isEducator, currentView]);
   const [healthStatus, setHealthStatus] = useState('connecting');
   const [chunkCount, setChunkCount] = useState(0);
   const [geminiConfigured, setGeminiConfigured] = useState(true);
@@ -71,7 +156,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (isSupabaseConfigured && !session) return undefined;
+    if (!session?.access_token) return undefined;
     fetchHealth();
     fetchCourses(true);
     const interval = setInterval(fetchHealth, 10000);
@@ -86,10 +171,19 @@ export default function App() {
     return created;
   };
 
+  const handleJoinCourse = async (inviteCode) => {
+    const joined = await joinCourseByInviteCode(inviteCode);
+    await fetchCourses();
+    setActiveCourse(joined);
+    setCurrentView('course-workspace');
+    return joined;
+  };
+
   const handleDeleteCourse = async (courseId) => {
     await deleteCourse(courseId);
     if (activeCourse && activeCourse.id === courseId) {
       setActiveCourse(null);
+      if (currentView === 'course-workspace') setCurrentView('courses');
     }
     await fetchCourses();
   };
@@ -120,27 +214,60 @@ export default function App() {
     setIsDrawerOpen(false);
   }, []);
 
-  // This gate is intentionally after every hook: React must see the same hook
-  // order before and after a user signs in or out.
-  if (isSupabaseConfigured && session === undefined) return null;
-  if (isSupabaseConfigured && !session) return <AuthScreen />;
+  const handleLogout = useCallback(() => {
+    signOut();
+    setActiveCourse(null);
+    setCurrentView('dashboard');
+    navigateBackToLanding();
+  }, [navigateBackToLanding]);
+
+  // Public gate strictly after all hooks
+  if (session === undefined) return null;
+  if (!session?.access_token) {
+    if (publicRoute.showAuth) {
+      return (
+        <AuthScreen
+          initialMode={publicRoute.mode}
+          onBackToLanding={navigateBackToLanding}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
+      );
+    }
+    return (
+      <LandingPage
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onOpenAuth={navigatePublicAuth}
+      />
+    );
+  }
 
   return (
     <div className="app-container">
-      {/* Floating Ambient Background Blobs */}
-      <div className="bg-blob blob-purple"></div>
-      <div className="bg-blob blob-blue"></div>
+      {/* Ambient Background Blobs */}
+      <div className="bg-blob blob-purple" aria-hidden="true"></div>
+      <div className="bg-blob blob-blue" aria-hidden="true"></div>
 
       {/* Warning Banner for Gemini API Key configuration */}
       <ApiKeyWarning isConfigured={geminiConfigured} />
 
       {/* Main Header */}
-      <Header status={healthStatus} onLogout={supabase ? () => supabase.auth.signOut() : undefined} />
+      <Header
+        status={healthStatus}
+        onLogout={handleLogout}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        currentView={currentView}
+        activeCourse={activeCourse}
+        currentUser={currentUser}
+      />
 
       {/* Primary Application Layout with Sidebar */}
       <div className="app-body-layout">
         <SidebarNav
           currentView={currentView}
+          isEducator={isEducator}
           onSelectView={(viewId) => {
             setCurrentView(viewId);
             if (viewId === 'studio') {
@@ -148,92 +275,116 @@ export default function App() {
             }
           }}
           activeCourse={activeCourse}
-          onClearActiveCourse={() => setActiveCourse(null)}
+          onClearActiveCourse={() => {
+            setActiveCourse(null);
+            if (currentView === 'course-workspace') {
+              setCurrentView('courses');
+            }
+          }}
         />
 
         <main className="main-content-viewport">
           <div className="view-transition">
-          {/* 1. DASHBOARD OVERVIEW */}
-          {currentView === 'dashboard' && (
-            <DashboardOverview
-              courses={courses}
-              chunkCount={chunkCount}
-              onNavigate={(viewId) => setCurrentView(viewId)}
-              onOpenCourse={handleOpenCourse}
-              onOpenStudio={(course) => {
-                if (course) setActiveCourse(course);
-                setActiveLectureId(null);
-                setCurrentView('studio');
-              }}
-            />
-          )}
+            {/* 1. DASHBOARD OVERVIEW */}
+            {currentView === 'dashboard' && isEducator && (
+              <DashboardOverview
+                courses={courses}
+                chunkCount={chunkCount}
+                onNavigate={(viewId) => setCurrentView(viewId)}
+                onOpenCourse={handleOpenCourse}
+                onOpenStudio={(course) => {
+                  if (course) setActiveCourse(course);
+                  setActiveLectureId(null);
+                  setCurrentView('studio');
+                }}
+              />
+            )}
 
-          {/* 2. COURSES DIRECTORY */}
-          {currentView === 'courses' && (
-            <CoursesView
-              courses={courses}
-              isLoading={isLoadingCourses}
-              onOpenCourse={handleOpenCourse}
-              onCreateCourse={handleCreateCourse}
-              onDeleteCourse={handleDeleteCourse}
-            />
-          )}
+            {/* 2. COURSES DIRECTORY */}
+            {currentView === 'courses' && (
+              <CoursesView
+                courses={courses}
+                isLoading={isLoadingCourses}
+                isEducator={isEducator}
+                onOpenCourse={handleOpenCourse}
+                onCreateCourse={handleCreateCourse}
+                onDeleteCourse={handleDeleteCourse}
+                onJoinCourse={handleJoinCourse}
+              />
+            )}
 
-          {/* 3. COURSE WORKSPACE */}
-          {currentView === 'course-workspace' && activeCourse && (
-            <CourseWorkspace
-              course={activeCourse}
-              onBackToCourses={() => setCurrentView('courses')}
-              onOpenStudioForCourse={(course) => handleOpenStudioForCourse(course)}
-              onOpenCitation={handleOpenCitation}
-              onOpenLecture={handleOpenLecture}
-            />
-          )}
+            {/* 3. COURSE WORKSPACE */}
+            {currentView === 'course-workspace' && activeCourse && (
+              <CourseWorkspace
+                course={activeCourse}
+                isEducator={isEducator || activeCourse.my_role === 'professor'}
+                onBackToCourses={() => setCurrentView('courses')}
+                onOpenStudioForCourse={(course) => handleOpenStudioForCourse(course)}
+                onOpenCitation={handleOpenCitation}
+                onOpenLecture={handleOpenLecture}
+              />
+            )}
 
-          {/* 4. ASK AI (STUDENT TUTOR) */}
-          {currentView === 'ask-ai' && (
-            <StudentTutor
-              chunkCount={chunkCount}
-              onUploadSuccess={fetchHealth}
-              onCitationClick={handleOpenCitation}
-            />
-          )}
+            {/* 4. ASK AI (COURSE-GROUNDED TUTOR) */}
+            {currentView === 'ask-ai' && (
+              <StudentTutor
+                courses={courses}
+                activeCourse={activeCourse}
+                onSelectCourse={(courseId) => {
+                  const found = courses.find((c) => c.id === courseId);
+                  if (found) setActiveCourse(found);
+                }}
+                chunkCount={chunkCount}
+                onUploadSuccess={() => {
+                  fetchHealth();
+                  fetchCourses();
+                }}
+                onCitationClick={handleOpenCitation}
+                onNavigateCourses={() => setCurrentView('courses')}
+              />
+            )}
 
-          {currentView === 'student-learning' && (
-            <StudentLearningView
-              courses={courses}
-              onOpenCourse={handleOpenCourse}
-              onOpenTutor={() => setCurrentView('ask-ai')}
-            />
-          )}
+            {/* 5. STUDENT LEARNING SPACE */}
+            {currentView === 'student-learning' && (
+              <StudentLearningView
+                courses={courses}
+                onOpenCourse={handleOpenCourse}
+                onOpenTutor={() => setCurrentView('ask-ai')}
+                onJoinCourse={handleJoinCourse}
+              />
+            )}
 
-          {/* 5. LECTURE STUDIO */}
-          {currentView === 'studio' && (
-            <LectureStudioView
-              courses={courses}
-              initialCourseId={activeCourse?.id}
-              initialLectureId={activeLectureId}
-              onOpenCitation={handleOpenCitation}
-              onBackToCourse={() => {
-                if (activeCourse) {
-                  setCurrentView('course-workspace');
-                } else {
-                  setCurrentView('courses');
-                }
-              }}
-            />
-          )}
+            {/* 6. LECTURE STUDIO */}
+            {currentView === 'studio' && isEducator && (
+              <LectureStudioView
+                courses={courses}
+                initialCourseId={activeCourse?.id}
+                initialLectureId={activeLectureId}
+                onOpenCitation={handleOpenCitation}
+                onBackToCourse={() => {
+                  if (activeCourse) {
+                    setCurrentView('course-workspace');
+                  } else {
+                    setCurrentView('courses');
+                  }
+                }}
+              />
+            )}
 
-          {/* 6. DOCUMENTS VIEW */}
-          {currentView === 'documents' && (
-            <DocumentsView
-              courses={courses}
-              onSelectCourse={(courseId) => {
-                const found = courses.find((c) => c.id === courseId);
-                if (found) setActiveCourse(found);
-              }}
-            />
-          )}
+            {/* 7. DOCUMENTS VIEW */}
+            {currentView === 'documents' && isEducator && (
+              <DocumentsView
+                courses={courses}
+                onSelectCourse={(courseId) => {
+                  const found = courses.find((c) => c.id === courseId);
+                  if (found) setActiveCourse(found);
+                }}
+                onDocumentsUpdated={() => {
+                  fetchHealth();
+                  fetchCourses();
+                }}
+              />
+            )}
           </div>
         </main>
       </div>

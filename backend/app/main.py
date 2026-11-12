@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse
 from app.config import settings
 from app.db.session import init_db
 from app.api.routes import router as api_router
+from app.api.auth import router as auth_router
 from app.api.courses import router as courses_router
 from app.api.lectures import router as lectures_router
 from app.api.quizzes import router as quizzes_router
@@ -52,6 +53,7 @@ app.add_middleware(
 )
 
 # Include API routes
+app.include_router(auth_router)
 app.include_router(api_router)
 app.include_router(courses_router)
 app.include_router(lectures_router)

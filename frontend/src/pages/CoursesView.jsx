@@ -1,11 +1,56 @@
 import React, { useState } from 'react';
 
-export default function CoursesView({ courses, onOpenCourse, onCreateCourse, onDeleteCourse, isLoading }) {
+export default function CoursesView({
+  courses,
+  onOpenCourse,
+  onCreateCourse,
+  onDeleteCourse,
+  onJoinCourse,
+  isEducator = false,
+  isLoading,
+}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
+  const [joinError, setJoinError] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
+  const [courseToDelete, setCourseToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const handleJoinSubmit = async (e) => {
+    e.preventDefault();
+    if (!inviteCode.trim() || !onJoinCourse) return;
+    try {
+      setIsJoining(true);
+      setJoinError('');
+      await onJoinCourse(inviteCode.trim());
+      setInviteCode('');
+      setIsJoinModalOpen(false);
+    } catch (err) {
+      setJoinError(err.message || 'Could not join course with this code.');
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!courseToDelete) return;
+    try {
+      setIsDeleting(true);
+      setDeleteError('');
+      await onDeleteCourse(courseToDelete.id);
+      setCourseToDelete(null);
+    } catch (err) {
+      setDeleteError(err.message || 'Failed to delete course');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,20 +74,37 @@ export default function CoursesView({ courses, onOpenCourse, onCreateCourse, onD
     <div className="courses-view-container">
       <div className="view-header">
         <div>
-          <h1 className="view-title">Courses</h1>
+          <h1 className="view-title">{isEducator ? 'Courses' : 'My Courses'}</h1>
           <p className="view-subtitle">
-            Manage your academic courses, uploaded materials, and AI-generated lectures.
+            {isEducator
+              ? 'Manage your academic courses, uploaded materials, invite codes, and published lectures.'
+              : 'Access your enrolled courses, published lectures, practice quizzes, and cited tutor.'}
           </p>
         </div>
-        <button
-          className="button button-primary"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ width: 18, height: 18, marginRight: 6 }}>
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-          </svg>
-          Create Course
-        </button>
+        <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+          {onJoinCourse && (
+            <button
+              className={`button ${isEducator ? 'button-secondary' : 'button-primary'}`}
+              onClick={() => {
+                setJoinError('');
+                setIsJoinModalOpen(true);
+              }}
+            >
+              Join via Invite Code
+            </button>
+          )}
+          {isEducator && (
+            <button
+              className="button button-primary"
+              onClick={() => setIsModalOpen(true)}
+            >
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ width: 18, height: 18, marginRight: 6 }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Create Course
+            </button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
@@ -53,62 +115,171 @@ export default function CoursesView({ courses, onOpenCourse, onCreateCourse, onD
       ) : courses.length === 0 ? (
         <div className="empty-courses-state glass-card">
           <div className="empty-icon">🎓</div>
-          <h3>No Courses Found</h3>
-          <p>Create your first course to upload lecture PDFs, ask grounded questions, and generate lectures in Lecture Studio.</p>
-          <button
-            className="button button-primary"
-            onClick={() => setIsModalOpen(true)}
-            style={{ marginTop: '1rem' }}
-          >
-            Create Course Now
-          </button>
+          <h3>{isEducator ? 'No Courses Found' : 'No Enrolled Courses Yet'}</h3>
+          <p>
+            {isEducator
+              ? 'Create your first course to upload lecture PDFs, invite students, and publish lectures.'
+              : 'Enter the invite code shared by your professor (e.g. EF-XXXXXX) to unlock course materials, lectures, and practice quizzes.'}
+          </p>
+          {isEducator ? (
+            <button
+              className="button button-primary"
+              onClick={() => setIsModalOpen(true)}
+              style={{ marginTop: '1rem' }}
+            >
+              Create Course Now
+            </button>
+          ) : (
+            <button
+              className="button button-primary"
+              onClick={() => setIsJoinModalOpen(true)}
+              style={{ marginTop: '1rem' }}
+            >
+              Join Course with Code
+            </button>
+          )}
         </div>
       ) : (
         <div className="courses-grid">
-          {courses.map((course) => (
-            <div key={course.id} className="course-card glass-card">
-              <div className="course-card-body">
-                <div className="course-card-top">
-                  <span className="badge course-badge">Course</span>
+          {courses.map((course) => {
+            const canManage = isEducator || course.my_role === 'professor';
+            return (
+              <div key={course.id} className="course-card glass-card">
+                <div className="course-card-body">
+                  <div className="course-card-top">
+                    <span className="badge course-badge">{canManage ? 'Educator' : 'Enrolled'}</span>
+                    {canManage && (
+                      <button
+                        className="course-del-btn"
+                        title="Delete course"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteError('');
+                          setCourseToDelete(course);
+                        }}
+                      >
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  <h3 className="course-title">{course.title}</h3>
+                  <p className="course-desc">
+                    {course.description || 'No description provided.'}
+                  </p>
+                </div>
+
+                <div className="course-card-footer">
+                  <div className="course-stats-meta">
+                    <span className="meta-pill">
+                      📄 {course.document_count || 0} doc{(course.document_count === 1) ? '' : 's'}
+                    </span>
+                    <span className="meta-pill">
+                      🎙️ {course.lecture_count || 0} lecture{(course.lecture_count === 1) ? '' : 's'}
+                    </span>
+                  </div>
                   <button
-                    className="course-del-btn"
-                    title="Delete course"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (window.confirm(`Are you sure you want to delete course "${course.title}" and its materials?`)) {
-                        onDeleteCourse(course.id);
-                      }
-                    }}
+                    className="button button-secondary open-course-btn"
+                    onClick={() => onOpenCourse(course)}
                   >
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+                    {canManage ? 'Open Workspace →' : 'Enter Course →'}
                   </button>
                 </div>
-                <h3 className="course-title">{course.title}</h3>
-                <p className="course-desc">
-                  {course.description || 'No description provided.'}
-                </p>
               </div>
+            );
+          })}
+        </div>
+      )}
 
-              <div className="course-card-footer">
-                <div className="course-stats-meta">
-                  <span className="meta-pill">
-                    📄 {course.document_count || 0} doc{(course.document_count === 1) ? '' : 's'}
-                  </span>
-                  <span className="meta-pill">
-                    🎙️ {course.lecture_count || 0} lecture{(course.lecture_count === 1) ? '' : 's'}
-                  </span>
-                </div>
+      {/* Join Course Modal */}
+      {isJoinModalOpen && (
+        <div className="modal-overlay" onClick={() => !isJoining && setIsJoinModalOpen(false)}>
+          <div className="modal-content glass-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <div className="modal-header">
+              <h3>Join Course with Invite Code</h3>
+              <button
+                type="button"
+                className="icon-button close-btn"
+                onClick={() => !isJoining && setIsJoinModalOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleJoinSubmit} className="modal-form">
+              {joinError && <div className="error-banner">{joinError}</div>}
+              <div className="form-group">
+                <label htmlFor="course-invite-code">Invite Code *</label>
+                <input
+                  id="course-invite-code"
+                  type="text"
+                  placeholder="e.g. EF-8K2M9Q"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="modal-actions">
                 <button
-                  className="button button-secondary open-course-btn"
-                  onClick={() => onOpenCourse(course)}
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => setIsJoinModalOpen(false)}
+                  disabled={isJoining}
                 >
-                  Open Workspace →
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="button button-primary"
+                  disabled={isJoining || !inviteCode.trim()}
+                >
+                  {isJoining ? 'Joining...' : 'Join Course →'}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {courseToDelete && (
+        <div className="modal-overlay" onClick={() => !isDeleting && setCourseToDelete(null)}>
+          <div className="modal-content glass-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="delete-course-heading">
+            <div className="modal-header">
+              <h3 id="delete-course-heading">Delete Course</h3>
+              <button
+                type="button"
+                className="icon-button close-btn"
+                onClick={() => !isDeleting && setCourseToDelete(null)}
+                aria-label="Close modal"
+              >
+                ×
+              </button>
             </div>
-          ))}
+            {deleteError && <div className="error-banner">{deleteError}</div>}
+            <p className="confirm-modal-copy">
+              Are you sure you want to delete <strong>{courseToDelete.title}</strong>? All uploaded course materials, lectures, and assessments in this workspace will be removed.
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => setCourseToDelete(null)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="button button-danger"
+                onClick={confirmDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting…' : 'Delete Course'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -6,6 +6,7 @@ import {
   deleteLectureSlide,
   regenerateLectureSlide,
   deleteLecture,
+  publishLecture,
 } from '../services/api';
 
 export default function LectureStudioView({
@@ -18,6 +19,14 @@ export default function LectureStudioView({
   const [selectedCourseId, setSelectedCourseId] = useState(
     initialCourseId || (courses.length > 0 ? courses[0].id : '')
   );
+
+  useEffect(() => {
+    if (initialCourseId) {
+      setSelectedCourseId(initialCourseId);
+    } else if (!selectedCourseId && courses.length > 0) {
+      setSelectedCourseId(courses[0].id);
+    }
+  }, [initialCourseId, courses, selectedCourseId]);
 
   // Form State for New Lecture Generation
   const [topic, setTopic] = useState('');
@@ -46,6 +55,26 @@ export default function LectureStudioView({
   const [regenInstruction, setRegenInstruction] = useState('');
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regenError, setRegenError] = useState('');
+
+  // Editor Inline Errors & Confirmation Dialog State
+  const [editorError, setEditorError] = useState('');
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null); // { type: 'slide' | 'lecture', slideIndex?, label }
+  const [isDeletingItem, setIsDeletingItem] = useState(false);
+
+  const handlePublishLecture = async () => {
+    if (!currentLecture || isPublishing) return;
+    try {
+      setIsPublishing(true);
+      setEditorError('');
+      const updated = await publishLecture(currentLecture.id);
+      setCurrentLecture(updated);
+    } catch (err) {
+      setEditorError(err.message || 'Failed to publish lecture');
+    } finally {
+      setIsPublishing(false);
+    }
+  };
 
   // Load lecture if initialLectureId provided
   useEffect(() => {
@@ -132,6 +161,7 @@ export default function LectureStudioView({
     try {
       setIsSavingSlide(true);
       setSlideSaveMsg('');
+      setEditorError('');
       const updated = await updateLectureSlide(currentLecture.id, slide.id, {
         title: editTitle.trim(),
         content: editBullets.filter((b) => b.trim().length > 0),
@@ -144,33 +174,24 @@ export default function LectureStudioView({
       setSlideSaveMsg('Slide saved successfully!');
       setTimeout(() => setSlideSaveMsg(''), 3000);
     } catch (err) {
-      alert(`Failed to save slide: ${err.message}`);
+      setEditorError(`Failed to save slide: ${err.message}`);
     } finally {
       setIsSavingSlide(false);
     }
   };
 
-  // Delete Slide
-  const handleDeleteSlide = async (slideIndex, e) => {
+  // Request Slide Delete Confirmation
+  const handleDeleteSlide = (slideIndex, e) => {
     e.stopPropagation();
     if (!currentLecture) return;
     const slide = currentLecture.slides[slideIndex];
     if (!slide) return;
-
-    if (!window.confirm(`Delete slide ${slide.slide_number}: "${slide.title}"?`)) {
-      return;
-    }
-
-    try {
-      await deleteLectureSlide(currentLecture.id, slide.id);
-      const reloaded = await getLecture(currentLecture.id);
-      setCurrentLecture(reloaded);
-      const nextIndex = Math.max(0, slideIndex - 1);
-      setSelectedSlideIndex(nextIndex);
-      syncSlideToEditState(reloaded.slides[nextIndex]);
-    } catch (err) {
-      alert(`Failed to delete slide: ${err.message}`);
-    }
+    setEditorError('');
+    setPendingDelete({
+      type: 'slide',
+      slideIndex,
+      label: `Slide ${slide.slide_number}: "${slide.title || 'Untitled'}"`,
+    });
   };
 
   // Regenerate Single Slide with AI
@@ -201,17 +222,42 @@ export default function LectureStudioView({
     }
   };
 
-  // Delete Entire Lecture
-  const handleDeleteLecture = async () => {
+  // Request Entire Lecture Delete Confirmation
+  const handleDeleteLecture = () => {
     if (!currentLecture) return;
-    if (!window.confirm(`Are you sure you want to delete lecture "${currentLecture.title}"?`)) return;
+    setEditorError('');
+    setPendingDelete({
+      type: 'lecture',
+      label: `lecture "${currentLecture.title}"`,
+    });
+  };
 
+  const executePendingDelete = async () => {
+    if (!pendingDelete || !currentLecture) return;
     try {
-      await deleteLecture(currentLecture.id);
-      setCurrentLecture(null);
-      if (onBackToCourse) onBackToCourse();
+      setIsDeletingItem(true);
+      setEditorError('');
+      if (pendingDelete.type === 'slide') {
+        const slideIndex = pendingDelete.slideIndex;
+        const slide = currentLecture.slides[slideIndex];
+        if (!slide) return;
+        await deleteLectureSlide(currentLecture.id, slide.id);
+        const reloaded = await getLecture(currentLecture.id);
+        setCurrentLecture(reloaded);
+        const nextIndex = Math.max(0, slideIndex - 1);
+        setSelectedSlideIndex(nextIndex);
+        syncSlideToEditState(reloaded.slides[nextIndex]);
+      } else if (pendingDelete.type === 'lecture') {
+        await deleteLecture(currentLecture.id);
+        setCurrentLecture(null);
+        if (onBackToCourse) onBackToCourse();
+      }
+      setPendingDelete(null);
     } catch (err) {
-      alert(`Failed to delete lecture: ${err.message}`);
+      setEditorError(`Delete failed: ${err.message}`);
+      setPendingDelete(null);
+    } finally {
+      setIsDeletingItem(false);
     }
   };
 
@@ -278,6 +324,17 @@ export default function LectureStudioView({
           </div>
 
           <div className="editor-top-actions">
+            {currentLecture.status !== 'published' ? (
+              <button
+                className="button button-primary"
+                onClick={handlePublishLecture}
+                disabled={isPublishing}
+              >
+                {isPublishing ? 'Publishing…' : 'Publish to Students ✓'}
+              </button>
+            ) : (
+              <span className="meta-pill published-pill">Published to Students</span>
+            )}
             <button
               className="button button-secondary"
               onClick={() => setCurrentLecture(null)}
@@ -309,6 +366,7 @@ export default function LectureStudioView({
         </section>
 
         {/* Editor Main Content: Outline on left, Main Slide on right */}
+        {editorError && <div className="error-banner">{editorError}</div>}
         <div className="editor-workspace-layout">
           {/* LEFT OUTLINE SIDEBAR */}
           <div className="slides-outline-sidebar glass-card">
@@ -528,6 +586,44 @@ export default function LectureStudioView({
             )}
           </div>
         </div>
+
+        {pendingDelete && (
+          <div className="modal-overlay" onClick={() => !isDeletingItem && setPendingDelete(null)}>
+            <div className="modal-content glass-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+              <div className="modal-header">
+                <h3>Confirm Removal</h3>
+                <button
+                  type="button"
+                  className="icon-button close-btn"
+                  onClick={() => !isDeletingItem && setPendingDelete(null)}
+                >
+                  ×
+                </button>
+              </div>
+              <p className="confirm-modal-copy">
+                Are you sure you want to remove <strong>{pendingDelete.label}</strong>?
+              </p>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => setPendingDelete(null)}
+                  disabled={isDeletingItem}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="button button-danger"
+                  onClick={executePendingDelete}
+                  disabled={isDeletingItem}
+                >
+                  {isDeletingItem ? 'Removing…' : 'Remove'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

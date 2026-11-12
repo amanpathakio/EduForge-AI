@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { generateCourseQuiz, getCourseQuizzes, publishCourseQuiz } from '../services/api';
 
 const generationSteps = ['Retrieving course evidence', 'Designing questions at the right level', 'Preparing a reviewable draft'];
@@ -13,15 +13,15 @@ export default function QuizPanel({ courseId, onOpenCourseArchitect }) {
   const [publishingId, setPublishingId] = useState(null);
   const [expandedQuizId, setExpandedQuizId] = useState(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       setQuizzes(await getCourseQuizzes(courseId));
     } catch (err) {
       setError(err.message || 'The assessment service is unavailable. Check that the backend is running and that you are signed in.');
     }
-  };
+  }, [courseId]);
 
-  useEffect(() => { load(); }, [courseId]);
+  useEffect(() => { load(); }, [load]);
 
   const generate = async (event) => {
     event.preventDefault();

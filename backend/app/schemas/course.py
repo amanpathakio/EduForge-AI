@@ -31,3 +31,31 @@ class CourseRead(CourseBase):
     updated_at: datetime
     document_count: int = 0
     lecture_count: int = 0
+    published_lecture_count: int = 0
+    my_role: str = "student"
+
+
+class CourseInviteRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    course_id: str
+    code: str
+    is_active: bool
+    uses_count: int
+    expires_at: Optional[datetime] = None
+    created_at: datetime
+
+
+class CourseJoinRequest(BaseModel):
+    code: str = Field(..., min_length=3, max_length=32)
+
+
+class CourseStudentRead(BaseModel):
+    user_id: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    role: str
+    joined_at: datetime
+    quiz_attempts_count: int = 0
+    correct_answers_count: int = 0

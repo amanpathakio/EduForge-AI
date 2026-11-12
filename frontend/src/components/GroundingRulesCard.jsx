@@ -15,7 +15,7 @@ export default function GroundingRulesCard() {
         Strict Grounding Safeguard
       </h2>
       <p className="rules-desc">
-        This pipeline guarantees <strong>zero hallucination</strong> on out-of-context questions. The Gemini generation module is strictly prompted to refuse answering if the retrieved semantic chunks do not contain the answer.
+        This pipeline <strong>reduces hallucination risk</strong> on out-of-context questions by retrieving course-isolated passages first and blocking synthesis when evidence is missing.
       </p>
       <div className="rules-bullets">
         <div className="rule-bullet">

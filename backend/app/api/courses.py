@@ -4,7 +4,15 @@ from fastapi import APIRouter, BackgroundTasks, Depends, UploadFile, File, statu
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.schemas.course import CourseCreate, CourseUpdate, CourseRead, DocumentRead
+from app.schemas.course import (
+    CourseCreate,
+    CourseUpdate,
+    CourseRead,
+    DocumentRead,
+    CourseInviteRead,
+    CourseJoinRequest,
+    CourseStudentRead,
+)
 from app.schemas.chat import CourseChatRequest, ChatResponse
 from app.services.course_service import CourseService
 from app.rag.retriever import retrieve_relevant_chunks
@@ -46,11 +54,20 @@ def produce_blueprint(course_id: str, blueprint_id: str, background_tasks: Backg
     background_tasks.add_task(AgentService.run_queued_blueprint_production, run.id, blueprint_id)
     return run
 
+@router.post("/join", response_model=CourseRead)
+def join_course_by_invite(
+    payload: CourseJoinRequest,
+    db: Session = Depends(get_db),
+    user: Profile = Depends(get_current_user),
+):
+    """Enroll the authenticated learner into a course using an instructor invite code."""
+    return CourseService.join_course_by_code(db, payload.code, user)
+
 @router.post("", response_model=CourseRead, status_code=status.HTTP_201_CREATED)
 def create_course(course_in: CourseCreate, db: Session = Depends(get_db), user: Profile = Depends(require_roles("professor", "admin"))):
     """Create a new course."""
     course = CourseService.create_course(db, course_in, user.id)
-    return CourseService.get_course_read(db, course.id)
+    return CourseService.get_course_read(db, course.id, user.id, user.role == "admin")
 
 @router.get("", response_model=List[CourseRead])
 def list_courses(db: Session = Depends(get_db), user: Profile = Depends(get_current_user)):
@@ -58,15 +75,42 @@ def list_courses(db: Session = Depends(get_db), user: Profile = Depends(get_curr
     return CourseService.get_courses(db, user.id, user.role == "admin")
 
 @router.get("/{course_id}", response_model=CourseRead)
-def get_course(course_id: str, db: Session = Depends(get_db), _course=Depends(require_course_access)):
+def get_course(course_id: str, db: Session = Depends(get_db), user: Profile = Depends(get_current_user), _course=Depends(require_course_access)):
     """Retrieve details for a single course."""
-    return CourseService.get_course_read(db, course_id)
+    return CourseService.get_course_read(db, course_id, user.id, user.role == "admin")
 
 @router.patch("/{course_id}", response_model=CourseRead)
-def update_course(course_id: str, course_in: CourseUpdate, db: Session = Depends(get_db), _course=Depends(require_course_manager)):
+def update_course(course_id: str, course_in: CourseUpdate, db: Session = Depends(get_db), user: Profile = Depends(get_current_user), _course=Depends(require_course_manager)):
     """Update title or description of a course."""
     course = CourseService.update_course(db, course_id, course_in)
-    return CourseService.get_course_read(db, course.id)
+    return CourseService.get_course_read(db, course.id, user.id, user.role == "admin")
+
+@router.get("/{course_id}/invites", response_model=List[CourseInviteRead])
+def list_course_invites(course_id: str, db: Session = Depends(get_db), _course=Depends(require_course_manager)):
+    """List active join codes for a course."""
+    return CourseService.list_course_invites(db, course_id)
+
+@router.post("/{course_id}/invites", response_model=CourseInviteRead, status_code=status.HTTP_201_CREATED)
+def create_course_invite(course_id: str, db: Session = Depends(get_db), user: Profile = Depends(get_current_user), _course=Depends(require_course_manager)):
+    """Generate a new join code for students."""
+    return CourseService.create_course_invite(db, course_id, user.id)
+
+@router.delete("/{course_id}/invites/{invite_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_course_invite(course_id: str, invite_id: str, db: Session = Depends(get_db), _course=Depends(require_course_manager)):
+    """Revoke a course join code."""
+    CourseService.revoke_course_invite(db, course_id, invite_id)
+    return None
+
+@router.get("/{course_id}/students", response_model=List[CourseStudentRead])
+def list_course_students(course_id: str, db: Session = Depends(get_db), _course=Depends(require_course_manager)):
+    """View enrolled students and quiz engagement for a course."""
+    return CourseService.list_course_students(db, course_id)
+
+@router.delete("/{course_id}/students/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_course_student(course_id: str, user_id: str, db: Session = Depends(get_db), _course=Depends(require_course_manager)):
+    """Remove a student's enrollment from a course."""
+    CourseService.remove_course_student(db, course_id, user_id)
+    return None
 
 @router.delete("/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_course(course_id: str, db: Session = Depends(get_db), _course=Depends(require_course_manager)):

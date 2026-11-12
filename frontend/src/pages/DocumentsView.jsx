@@ -2,12 +2,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { getCourseDocuments, uploadCourseDocument } from '../services/api';
 import UploadPanel from '../components/UploadPanel';
 
-export default function DocumentsView({ courses, onSelectCourse }) {
+export default function DocumentsView({ courses, onSelectCourse, onDocumentsUpdated }) {
   const [selectedCourseId, setSelectedCourseId] = useState(
     courses.length > 0 ? courses[0].id : ''
   );
   const [documents, setDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if ((!selectedCourseId || !courses.some((c) => c.id === selectedCourseId)) && courses.length > 0) {
+      setSelectedCourseId(courses[0].id);
+    }
+  }, [courses, selectedCourseId]);
 
   const loadDocs = useCallback(async () => {
     if (!selectedCourseId) {
@@ -72,7 +78,10 @@ export default function DocumentsView({ courses, onSelectCourse }) {
         <div className="documents-page-grid">
           <div className="doc-uploader-pane">
             <UploadPanel
-              onUploadSuccess={loadDocs}
+              onUploadSuccess={() => {
+                loadDocs();
+                if (onDocumentsUpdated) onDocumentsUpdated();
+              }}
               customUploader={handleUpload}
             />
           </div>
@@ -101,7 +110,7 @@ export default function DocumentsView({ courses, onSelectCourse }) {
                         {doc.pages_count} pages · {doc.chunks_count} vector chunks · Added {new Date(doc.created_at).toLocaleDateString()}
                       </span>
                     </div>
-                    <span className="doc-status-badge">Indexed in ChromaDB</span>
+                    <span className="doc-status-badge">Indexed in Vault</span>
                   </div>
                 ))}
               </div>
