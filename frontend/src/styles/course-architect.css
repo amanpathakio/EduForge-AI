@@ -1,110 +1,302 @@
 /* ==========================================================================
-   Course Planner / Architect - Clean Utility Design (Linear / Notion Style)
+   EduForge AI — Course Planner Studio (Curriculum Architect & Lesson Producer)
+   Flawless Porcelain Light & Obsidian Studio Dark Matching Landing Page
    ========================================================================== */
 
 .course-architect-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.75rem;
   width: 100%;
+  animation: fadeIn 0.25s ease-out;
 }
 
-/* Header */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --------------------------------------------------------------------------
+   Header Row
+   -------------------------------------------------------------------------- */
 .architect-header-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--ef-border, rgba(255, 255, 255, 0.08));
+  gap: 1.5rem;
+  padding: 1.5rem 1.75rem;
+  border-radius: 16px;
+  background: var(--ef-surface-glass, rgba(255, 255, 255, 0.85));
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--ef-border, rgba(15, 23, 42, 0.08));
+  box-shadow: var(--ef-shadow-sm, 0 4px 16px rgba(15, 23, 42, 0.04));
+}
+
+[data-theme='dark'] .architect-header-row {
+  background: var(--ef-surface-glass, rgba(15, 23, 42, 0.75));
+  border-color: rgba(99, 102, 241, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.architect-header-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ef-primary, #4f46e5);
+  margin-bottom: 0.35rem;
 }
 
 .architect-header-row h2 {
-  font-size: 1.35rem;
-  font-weight: 650;
-  color: var(--ef-text, #ffffff);
-  margin: 0 0 0.25rem 0;
-  letter-spacing: -0.015em;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--ef-text, #0f172a);
+  margin: 0 0 0.35rem 0;
+  letter-spacing: -0.02em;
+  font-family: var(--ef-font-display, 'Outfit', sans-serif);
 }
 
 .architect-header-row p {
   font-size: 0.88rem;
-  color: var(--ef-text-muted, #94a3b8);
+  color: var(--ef-text-secondary, #475569);
   margin: 0;
-  max-width: 650px;
-  line-height: 1.5;
+  max-width: 680px;
+  line-height: 1.55;
 }
 
 .planner-status-badge {
-  padding: 0.25rem 0.65rem;
-  border-radius: 6px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  border: 1px solid var(--ef-border, rgba(255, 255, 255, 0.12));
-  background: var(--ef-surface-alt, rgba(255, 255, 255, 0.04));
-  color: var(--ef-text-muted, #94a3b8);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 650;
+  border: 1px solid var(--ef-border, rgba(15, 23, 42, 0.1));
+  background: var(--ef-surface-alt, #f1f5f9);
+  color: var(--ef-text-secondary, #475569);
   white-space: nowrap;
 }
 
 .planner-status-badge.working {
-  border-color: rgba(99, 102, 241, 0.4);
+  border-color: rgba(99, 102, 241, 0.35);
+  color: #4f46e5;
+  background: rgba(79, 70, 229, 0.08);
+}
+
+[data-theme='dark'] .planner-status-badge.working {
   color: #818cf8;
-  background: rgba(99, 102, 241, 0.08);
+  background: rgba(99, 102, 241, 0.15);
 }
 
 .planner-status-badge.approved {
-  border-color: rgba(16, 185, 129, 0.4);
-  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #059669;
   background: rgba(16, 185, 129, 0.08);
 }
 
-/* Prompt / Goal Section */
-.planner-form-card {
-  padding: 1.35rem 1.5rem;
+[data-theme='dark'] .planner-status-badge.approved {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+}
+
+/* --------------------------------------------------------------------------
+   Interactive Pipeline Stepper (Step 1 -> Step 2)
+   -------------------------------------------------------------------------- */
+.planner-pipeline-stepper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .planner-pipeline-stepper {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pipeline-step-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.9rem 1.25rem;
   border-radius: 12px;
-  background: var(--ef-surface-card, rgba(18, 20, 29, 0.6));
-  border: 1px solid var(--ef-border, rgba(255, 255, 255, 0.08));
+  background: var(--ef-surface-glass, rgba(255, 255, 255, 0.75));
+  border: 1px solid var(--ef-border, rgba(15, 23, 42, 0.08));
+  transition: all 0.2s ease;
+}
+
+[data-theme='dark'] .pipeline-step-pill {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.pipeline-step-pill.active {
+  border-color: var(--ef-primary-border, rgba(79, 70, 229, 0.35));
+  background: rgba(79, 70, 229, 0.04);
+}
+
+[data-theme='dark'] .pipeline-step-pill.active {
+  background: rgba(79, 70, 229, 0.12);
+}
+
+.pipeline-step-pill.completed {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.pipeline-step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 750;
+  background: var(--ef-surface-alt, #e2e8f0);
+  color: var(--ef-text-secondary, #475569);
+  flex-shrink: 0;
+}
+
+.pipeline-step-pill.active .pipeline-step-num {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+}
+
+.pipeline-step-pill.completed .pipeline-step-num {
+  background: #059669;
+  color: #ffffff;
+}
+
+.pipeline-step-meta strong {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--ef-text, #0f172a);
+  font-weight: 650;
+}
+
+.pipeline-step-meta span {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--ef-text-muted, #64748b);
+  margin-top: 0.1rem;
+}
+
+/* --------------------------------------------------------------------------
+   Step 1 Card (Prompt / Syllabus Architect)
+   -------------------------------------------------------------------------- */
+.planner-form-card {
+  padding: 1.5rem 1.75rem;
+  border-radius: 16px;
+  background: var(--ef-surface-glass, rgba(255, 255, 255, 0.85));
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--ef-border, rgba(15, 23, 42, 0.08));
+  box-shadow: var(--ef-shadow-sm, 0 4px 16px rgba(15, 23, 42, 0.04));
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
+}
+
+[data-theme='dark'] .planner-form-card {
+  background: var(--ef-surface-glass, rgba(15, 23, 42, 0.75));
+  border-color: rgba(99, 102, 241, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
 
 .planner-form-label-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .planner-form-label-row label {
-  font-size: 0.84rem;
-  font-weight: 600;
-  color: var(--ef-text, #ffffff);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--ef-text, #0f172a);
 }
 
 .planner-doc-count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #059669;
+  background: rgba(5, 150, 105, 0.08);
+  border: 1px solid rgba(5, 150, 105, 0.2);
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+}
+
+/* Quick prompt pills */
+.prompt-chips-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.prompt-chips-label {
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--ef-text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.prompt-chip-btn {
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
   font-size: 0.76rem;
-  color: var(--ef-text-muted, #94a3b8);
+  font-weight: 550;
+  background: var(--ef-surface-alt, #f1f5f9);
+  border: 1px solid var(--ef-border, rgba(15, 23, 42, 0.08));
+  color: var(--ef-text-secondary, #475569);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+[data-theme='dark'] .prompt-chip-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+}
+
+.prompt-chip-btn:hover {
+  background: rgba(79, 70, 229, 0.08);
+  border-color: var(--ef-primary-border, rgba(79, 70, 229, 0.3));
+  color: var(--ef-primary, #4f46e5);
 }
 
 .planner-textarea {
   width: 100%;
-  min-height: 80px;
-  padding: 0.75rem 0.9rem;
-  border-radius: 8px;
-  background: var(--ef-surface-alt, rgba(0, 0, 0, 0.2));
-  border: 1px solid var(--ef-border, rgba(255, 255, 255, 0.12));
-  color: var(--ef-text, #ffffff);
+  min-height: 84px;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: var(--ef-input-bg, #f8faff);
+  border: 1px solid var(--ef-border-strong, rgba(15, 23, 42, 0.16));
+  color: var(--ef-text, #0f172a);
   font-family: inherit;
-  font-size: 0.88rem;
-  line-height: 1.5;
+  font-size: 0.9rem;
+  line-height: 1.55;
   resize: vertical;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+[data-theme='dark'] .planner-textarea {
+  background: var(--ef-input-bg, #080b14);
+  border-color: rgba(148, 163, 255, 0.2);
+  color: var(--ef-text, #f8fafc);
 }
 
 .planner-textarea:focus {
   outline: none;
-  border-color: var(--ef-primary, #6366f1);
+  border-color: var(--ef-primary, #4f46e5);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
 }
 
 .planner-form-actions {
@@ -116,74 +308,189 @@
 }
 
 .planner-hints {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--ef-text-muted, #64748b);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
-/* Warning box when 0 documents */
-.no-docs-banner {
+/* Collapsed Blueprint Summary State (When Step 1 is done) */
+.blueprint-summary-compact {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.85rem 1rem;
-  border-radius: 8px;
-  background: rgba(245, 158, 11, 0.06);
-  border: 1px solid rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
-  font-size: 0.84rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
-/* Steps / Activity */
+.summary-compact-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.summary-check-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #059669;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.summary-compact-text strong {
+  display: block;
+  font-size: 0.92rem;
+  color: var(--ef-text, #0f172a);
+}
+
+.summary-compact-text span {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--ef-text-muted, #64748b);
+  margin-top: 0.15rem;
+}
+
+/* --------------------------------------------------------------------------
+   Step 2 Card (Lesson & Assessment Synthesis)
+   -------------------------------------------------------------------------- */
+.lesson-producer-card {
+  padding: 1.5rem 1.75rem;
+  border-radius: 16px;
+  background: var(--ef-surface-glass, rgba(255, 255, 255, 0.85));
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--ef-border, rgba(15, 23, 42, 0.08));
+  box-shadow: var(--ef-shadow-sm, 0 4px 16px rgba(15, 23, 42, 0.04));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+[data-theme='dark'] .lesson-producer-card {
+  background: var(--ef-surface-glass, rgba(15, 23, 42, 0.75));
+  border-color: rgba(99, 102, 241, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.lesson-producer-card.highlight {
+  border-color: var(--ef-primary-border, rgba(79, 70, 229, 0.35));
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.04) 0%, rgba(124, 58, 237, 0.03) 100%);
+}
+
+.lesson-producer-info h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ef-text, #0f172a);
+  margin: 0 0 0.3rem 0;
+}
+
+.lesson-producer-info p {
+  font-size: 0.84rem;
+  color: var(--ef-text-secondary, #475569);
+  margin: 0;
+  max-width: 580px;
+  line-height: 1.5;
+}
+
+.lesson-producer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* --------------------------------------------------------------------------
+   Activity / Live Progress Card
+   -------------------------------------------------------------------------- */
 .planner-activity-card {
-  padding: 1.15rem 1.35rem;
-  border-radius: 10px;
-  background: var(--ef-surface-card, rgba(18, 20, 29, 0.6));
-  border: 1px solid var(--ef-border, rgba(255, 255, 255, 0.08));
+  padding: 1.25rem 1.5rem;
+  border-radius: 14px;
+  background: var(--ef-surface-glass, rgba(255, 255, 255, 0.85));
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--ef-border, rgba(15, 23, 42, 0.08));
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.85rem;
+}
+
+[data-theme='dark'] .planner-activity-card {
+  background: rgba(15, 23, 42, 0.75);
+  border-color: rgba(99, 102, 241, 0.2);
 }
 
 .activity-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--ef-text, #ffffff);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ef-text, #0f172a);
 }
 
 .activity-steps {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.55rem;
 }
 
 .activity-step-row {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  font-size: 0.8rem;
-  color: var(--ef-text-muted, #94a3b8);
+  gap: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--ef-text-muted, #64748b);
+  padding: 0.25rem 0;
 }
 
 .activity-step-row.completed {
-  color: var(--ef-text, #e2e8f0);
+  color: var(--ef-text, #0f172a);
+  font-weight: 550;
 }
 
 .activity-step-row.completed .step-dot {
-  color: #10b981;
+  color: #059669;
+  background: rgba(16, 185, 129, 0.12);
 }
 
 .activity-step-row.running {
-  color: #818cf8;
+  color: var(--ef-primary, #4f46e5);
+  font-weight: 600;
+}
+
+.activity-step-row.running .step-dot {
+  color: var(--ef-primary, #4f46e5);
+  background: rgba(79, 70, 229, 0.12);
+  animation: pulseDot 1.4s infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.6; }
 }
 
 .step-dot {
-  font-size: 0.75rem;
-  width: 14px;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: var(--ef-surface-alt, #e2e8f0);
+  color: var(--ef-text-muted, #94a3b8);
+  flex-shrink: 0;
 }
 
 /* Artifacts banner */
@@ -192,23 +499,40 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  font-size: 0.82rem;
+  padding: 0.9rem 1.25rem;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  font-size: 0.86rem;
+  color: #065f46;
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+
+[data-theme='dark'] .planner-artifacts-row {
+  background: rgba(16, 185, 129, 0.12);
   color: #34d399;
 }
 
-/* Blueprint Section (Structured Academic Table / List) */
+/* --------------------------------------------------------------------------
+   Syllabus Outline (Structured Table & Modules Cards)
+   -------------------------------------------------------------------------- */
 .syllabus-card {
-  padding: 1.5rem;
-  border-radius: 12px;
-  background: var(--ef-surface-card, rgba(18, 20, 29, 0.6));
-  border: 1px solid var(--ef-border, rgba(255, 255, 255, 0.08));
+  padding: 1.6rem 1.75rem;
+  border-radius: 16px;
+  background: var(--ef-surface-glass, rgba(255, 255, 255, 0.85));
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--ef-border, rgba(15, 23, 42, 0.08));
+  box-shadow: var(--ef-shadow-sm, 0 4px 16px rgba(15, 23, 42, 0.04));
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+
+[data-theme='dark'] .syllabus-card {
+  background: var(--ef-surface-glass, rgba(15, 23, 42, 0.75));
+  border-color: rgba(99, 102, 241, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
 
 .syllabus-card-header {
@@ -218,86 +542,126 @@
   gap: 1rem;
   flex-wrap: wrap;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--ef-border, rgba(255, 255, 255, 0.08));
+  border-bottom: 1px solid var(--ef-border, rgba(15, 23, 42, 0.08));
 }
 
 .syllabus-card-header h3 {
-  font-size: 1.1rem;
-  font-weight: 650;
-  color: var(--ef-text, #ffffff);
-  margin: 0 0 0.2rem 0;
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: var(--ef-text, #0f172a);
+  margin: 0 0 0.25rem 0;
+  font-family: var(--ef-font-display, 'Outfit', sans-serif);
 }
 
 .syllabus-card-header p {
-  font-size: 0.82rem;
-  color: var(--ef-text-muted, #94a3b8);
+  font-size: 0.84rem;
+  color: var(--ef-text-secondary, #475569);
   margin: 0;
 }
 
-.syllabus-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-}
-
-/* Clean Modules List */
+/* Modules Table */
 .modules-table {
   display: flex;
   flex-direction: column;
-  border-radius: 8px;
-  border: 1px solid var(--ef-border, rgba(255, 255, 255, 0.08));
-  overflow: hidden;
+  gap: 0.65rem;
 }
 
 .module-row {
   display: grid;
-  grid-template-columns: 48px 1fr 140px;
+  grid-template-columns: 46px 1fr auto;
   align-items: center;
-  gap: 1rem;
-  padding: 0.85rem 1rem;
-  background: var(--ef-surface-alt, rgba(255, 255, 255, 0.02));
-  border-bottom: 1px solid var(--ef-border, rgba(255, 255, 255, 0.06));
-  transition: background 0.15s ease;
+  gap: 1.15rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background: var(--ef-surface, #ffffff);
+  border: 1px solid var(--ef-border, rgba(15, 23, 42, 0.07));
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.module-row:last-child {
-  border-bottom: none;
+[data-theme='dark'] .module-row {
+  background: rgba(15, 23, 42, 0.65);
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 .module-row:hover {
-  background: var(--ef-surface-hover, rgba(255, 255, 255, 0.04));
+  transform: translateY(-1px);
+  border-color: var(--ef-primary-border, rgba(79, 70, 229, 0.25));
+  box-shadow: var(--ef-shadow-sm, 0 4px 14px rgba(15, 23, 42, 0.05));
 }
 
 .module-index {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--ef-text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: rgba(79, 70, 229, 0.08);
+  color: var(--ef-primary, #4f46e5);
+  font-size: 0.82rem;
+  font-weight: 750;
   font-variant-numeric: tabular-nums;
+}
+
+[data-theme='dark'] .module-index {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
 }
 
 .module-info {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
 }
 
 .module-info strong {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--ef-text, #ffffff);
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--ef-text, #0f172a);
 }
 
 .module-info span {
-  font-size: 0.8rem;
-  color: var(--ef-text-muted, #94a3b8);
-  line-height: 1.4;
+  font-size: 0.82rem;
+  color: var(--ef-text-secondary, #475569);
+  line-height: 1.45;
 }
 
 .module-source {
-  font-size: 0.72rem;
-  color: #10b981;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #059669;
+  background: rgba(5, 150, 105, 0.08);
+  border: 1px solid rgba(5, 150, 105, 0.22);
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
   text-align: right;
   white-space: nowrap;
+}
+
+[data-theme='dark'] .module-source {
+  color: #34d399;
+  background: rgba(5, 150, 105, 0.18);
+}
+
+/* Warning box when 0 documents */
+.no-docs-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #b45309;
+  font-size: 0.86rem;
+  font-weight: 550;
+}
+
+[data-theme='dark'] .no-docs-banner {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.12);
 }
 
 @media (max-width: 640px) {
@@ -307,6 +671,7 @@
   .module-source {
     grid-column: 2 / -1;
     text-align: left;
-    margin-top: 0.2rem;
+    margin-top: 0.25rem;
+    align-self: flex-start;
   }
 }
