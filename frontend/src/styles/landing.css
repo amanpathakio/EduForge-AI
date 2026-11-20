@@ -3080,15 +3080,15 @@ button:hover .btn-arrow {
 /* Role Segmented Switcher for Sign Up */
 .auth-role-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.42rem;
   margin-bottom: 0.7rem;
 }
 
 .role-card-btn {
   display: flex;
   flex-direction: column;
-  padding: 0.48rem 0.65rem;
+  padding: 0.45rem 0.55rem;
   border-radius: 10px;
   border: 1px solid var(--ef-border, rgba(255, 255, 255, 0.08));
   background: var(--ef-surface-alt, rgba(255, 255, 255, 0.025));
@@ -3111,10 +3111,10 @@ button:hover .btn-arrow {
 
 .role-card-badge {
   font-family: var(--ef-font-mono);
-  font-size: 0.58rem;
+  font-size: 0.56rem;
   font-weight: 700;
   letter-spacing: 0.06em;
-  padding: 0.1rem 0.35rem;
+  padding: 0.1rem 0.3rem;
   border-radius: 4px;
 }
 
@@ -3128,6 +3128,11 @@ button:hover .btn-arrow {
   background: rgba(99, 102, 241, 0.12);
 }
 
+.role-card-badge.admin {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.14);
+}
+
 .role-card-dot {
   width: 5px;
   height: 5px;
@@ -3139,14 +3144,14 @@ button:hover .btn-arrow {
 
 .role-card-btn b {
   display: block;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   line-height: 1.2;
   margin-bottom: 0.06rem;
 }
 
 .role-card-btn small {
   display: block;
-  font-size: 0.63rem;
+  font-size: 0.6rem;
   color: var(--ef-text-muted);
   line-height: 1.2;
 }
@@ -3163,6 +3168,12 @@ button:hover .btn-arrow {
   box-shadow: 0 0 14px rgba(99, 102, 241, 0.14);
 }
 
+.role-card-btn.active.admin {
+  border-color: rgba(245, 158, 11, 0.55);
+  background: rgba(245, 158, 11, 0.06);
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.14);
+}
+
 .role-card-btn.active .role-card-dot {
   opacity: 1;
 }
@@ -3175,6 +3186,78 @@ button:hover .btn-arrow {
 .role-card-btn.active.prof .role-card-dot {
   background: #818cf8;
   box-shadow: 0 0 6px #818cf8;
+}
+
+.role-card-btn.active.admin .role-card-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 6px #f59e0b;
+}
+
+/* Google OAuth Button & Divider */
+.auth-oauth-container {
+  margin-bottom: 0.5rem;
+}
+
+.auth-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.58rem 1rem;
+  border-radius: 9px;
+  border: 1px solid var(--ef-border, rgba(255, 255, 255, 0.12));
+  background: var(--ef-surface-alt, rgba(255, 255, 255, 0.035));
+  color: var(--ef-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme='light'] .auth-google-btn {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.auth-google-btn:hover {
+  background: var(--ef-surface-hover, rgba(255, 255, 255, 0.08));
+  border-color: rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
+}
+
+[data-theme='light'] .auth-google-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 0.55rem 0 0.45rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--ef-border, rgba(255, 255, 255, 0.09));
+}
+
+[data-theme='light'] .auth-divider::before,
+[data-theme='light'] .auth-divider::after {
+  border-bottom-color: #e2e8f0;
+}
+
+.auth-divider span {
+  padding: 0 0.55rem;
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ef-text-muted, #94a3b8);
 }
 
 /* Monolith Form Fields */
