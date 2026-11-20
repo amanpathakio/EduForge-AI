@@ -105,6 +105,17 @@ export default function CourseWorkspace({
     }
   }, [loadDocuments, loadLectures, loadRosterAndInvites, canManage]);
 
+  // Auto-refresh relevant data whenever switching tabs so user never needs a browser refresh
+  useEffect(() => {
+    if (activeTab === 'lectures') {
+      loadLectures();
+    } else if (activeTab === 'documents') {
+      loadDocuments();
+    } else if (activeTab === 'roster' && canManage) {
+      loadRosterAndInvites();
+    }
+  }, [activeTab, loadLectures, loadDocuments, loadRosterAndInvites, canManage]);
+
   const handleDocumentUploaded = () => {
     loadDocuments();
   };
@@ -392,8 +403,18 @@ export default function CourseWorkspace({
             courseId={course.id}
             documentCount={documents.length}
             onOpenQuizzes={() => setActiveTab('quizzes')}
-            onOpenLectures={() => setActiveTab('lectures')}
-            onOpenDocuments={() => setActiveTab('documents')}
+            onOpenLectures={() => {
+              loadLectures();
+              setActiveTab('lectures');
+            }}
+            onOpenDocuments={() => {
+              loadDocuments();
+              setActiveTab('documents');
+            }}
+            onCourseUpdated={() => {
+              loadLectures();
+              loadDocuments();
+            }}
           />
         )}
 

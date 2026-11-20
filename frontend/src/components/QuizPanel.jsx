@@ -119,7 +119,10 @@ export default function QuizPanel({ courseId, onOpenCourseArchitect }) {
             </div>
           ) : <>
             {planningPlaceholders.length > 0 && <div className="quiz-placeholder-note">
-              <span aria-hidden="true">i</span><p><b>{planningPlaceholders.length} old planning {planningPlaceholders.length === 1 ? 'placeholder is' : 'placeholders are'} hidden from review.</b> They contain no questions and cannot be published. New Course Architect runs create complete drafts instead.</p>
+              <span aria-hidden="true">ℹ️</span>
+              <p>
+                <b>{planningPlaceholders.length} course planner {planningPlaceholders.length === 1 ? 'draft is' : 'drafts are'} pending question generation.</b> Approving the syllabus in Course Planner will produce full lessons and quizzes, or you can generate a custom quiz using the Direct Quiz Builder.
+              </p>
             </div>}
             {reviewableQuizzes.map((quiz) => {
             const citedQuestions = quiz.questions.filter((question) => question.source_page).length;

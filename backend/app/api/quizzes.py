@@ -257,10 +257,44 @@ def list_quizzes(
     db: Session = Depends(get_db),
     course: Course = Depends(require_course_manager),
 ):
-    """List all quizzes (draft and published) for course management."""
-    return db.scalars(
+    """List all quizzes (draft and published) for course management, auto-backfilling questions for any empty module drafts."""
+    quizzes = db.scalars(
         select(Quiz).where(Quiz.course_id == course_id).order_by(Quiz.created_at.desc())
     ).all()
+
+    updated = False
+    for quiz in quizzes:
+        if not quiz.questions:
+            topic = quiz.title.replace("Draft practice: ", "").replace(" practice", "").strip() or course.title
+            chunks, _ = _gather_quiz_context(course_id, topic, db, 5)
+            questions_data = _build_algorithmic_questions(
+                topic=topic,
+                difficulty="intermediate",
+                count=5,
+                chunks=chunks,
+                course_title=course.title,
+            )
+            for position, q_dict in enumerate(questions_data, 1):
+                db.add(QuizQuestion(
+                    quiz_id=quiz.id,
+                    position=position,
+                    prompt=q_dict["prompt"],
+                    options=q_dict["options"],
+                    correct_option=q_dict["correct_option"],
+                    explanation=q_dict["explanation"],
+                    learning_objective=f"Assess understanding of {topic}"[:255],
+                    source_chunk_id=q_dict.get("source_chunk_id"),
+                    source_page=q_dict.get("source_page"),
+                ))
+            updated = True
+
+    if updated:
+        db.commit()
+        quizzes = db.scalars(
+            select(Quiz).where(Quiz.course_id == course_id).order_by(Quiz.created_at.desc())
+        ).all()
+
+    return quizzes
 
 
 @router.post("", response_model=QuizRead, status_code=status.HTTP_201_CREATED)

@@ -14,6 +14,7 @@ export default function CourseArchitectPanel({
   onOpenQuizzes,
   onOpenLectures,
   onOpenDocuments,
+  onCourseUpdated,
 }) {
   const [runs, setRuns] = useState([]);
   const [blueprint, setBlueprint] = useState(null);
@@ -57,6 +58,7 @@ export default function CourseArchitectPanel({
       const created = await startCourseArchitect(courseId, { goal });
       setRuns((prev) => [created, ...prev]);
       await loadData();
+      onCourseUpdated?.();
     } catch (e) {
       setError(e.message || 'Failed to generate course outline.');
     } finally {
@@ -71,6 +73,7 @@ export default function CourseArchitectPanel({
       setError('');
       const approved = await approveCourseBlueprint(courseId, blueprint.id);
       setBlueprint(approved);
+      onCourseUpdated?.();
     } catch (e) {
       setError(e.message || 'Failed to approve syllabus.');
     } finally {
@@ -86,6 +89,7 @@ export default function CourseArchitectPanel({
       const queued = await produceBlueprintLessons(courseId, blueprint.id);
       setRuns((prev) => [queued, ...prev]);
       await loadData();
+      onCourseUpdated?.();
     } catch (e) {
       setError(e.message || 'Failed to generate lessons.');
     } finally {

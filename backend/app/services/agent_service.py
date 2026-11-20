@@ -242,7 +242,8 @@ SOURCE:\n{context}'''
                 lecture = Lecture(course_id=course_id, module_id=module.id, title=f"Draft: {title}"[:255], topic=title, learning_objectives=[objective], status="draft", additional_instructions=f"Created by Course Architect run {run.id}; evidence pages: {pages}")
                 db.add(lecture); db.flush()
                 db.add(LectureSlide(lecture_id=lecture.id, slide_number=1, title=title, content=[objective, f"Ground this lecture in source pages: {', '.join(map(str, pages)) if pages else 'review mapped evidence'}"], speaker_notes="Course Architect starter slide. Expand or regenerate this draft after professor review."))
-                db.add(Quiz(course_id=course_id, module_id=module.id, title=f"Draft practice: {title}"[:255], status="draft"))
+                # Build real reviewable practice questions immediately so the quiz is never an empty placeholder
+                AgentService._build_module_quiz(db, course_id, module)
             db.commit()
             AgentService._finish(db, materialize, {"blueprint_id": blueprint.id, "modules_created": len(created_modules), "lecture_drafts_created": len(created_modules), "quiz_drafts_created": len(created_modules)})
             review = AgentService._step(db, run, 4, "quality_gate", "Preparing approval checkpoint", "Drafts exist only in the professor workspace until this blueprint is approved.")
