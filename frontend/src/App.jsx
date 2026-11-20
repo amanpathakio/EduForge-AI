@@ -63,11 +63,6 @@ export default function App() {
   }, []);
 
   const [publicRoute, setPublicRoute] = useState(() => parsePublicRoute(window.location.pathname));
-  useEffect(() => {
-    const onPopState = () => setPublicRoute(parsePublicRoute(window.location.pathname));
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
 
   const navigatePublicAuth = useCallback((mode = 'login') => {
     const targetPath = mode === 'signup' ? '/signup' : mode === 'reset' ? '/reset' : '/login';
@@ -123,6 +118,50 @@ export default function App() {
   // Active Lecture for Studio Editor
   const [activeLectureId, setActiveLectureId] = useState(null);
 
+  // In-app navigation synced with browser History (Back/Forward arrows)
+  const navigateView = useCallback((viewId, course = undefined, push = true) => {
+    setCurrentView(viewId);
+    if (course !== undefined) {
+      setActiveCourse(course);
+    }
+    if (push && typeof window !== 'undefined') {
+      const courseId = course !== undefined ? course?.id : activeCourse?.id;
+      const targetPath = viewId === 'dashboard' ? '/' : `/${viewId}`;
+      window.history.pushState({ viewId, courseId: courseId || null }, '', targetPath);
+    }
+  }, [activeCourse]);
+
+  // Clean up URL if arriving from /login into authenticated state
+  useEffect(() => {
+    if (session?.access_token && ['/login', '/signup', '/reset'].includes(window.location.pathname)) {
+      window.history.replaceState({ viewId: 'dashboard', courseId: null }, '', '/');
+    }
+  }, [session]);
+
+  // Handle browser Back & Forward button navigation
+  useEffect(() => {
+    const handlePopState = (e) => {
+      if (session?.access_token) {
+        if (e.state && e.state.viewId) {
+          setCurrentView(e.state.viewId);
+          if (e.state.courseId && courses.length > 0) {
+            const matched = courses.find((c) => c.id === e.state.courseId);
+            if (matched) setActiveCourse(matched);
+          } else if (e.state.courseId === null) {
+            setActiveCourse(null);
+          }
+        } else {
+          setCurrentView('dashboard');
+          setActiveCourse(null);
+        }
+      } else {
+        setPublicRoute(parsePublicRoute(window.location.pathname));
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [session, courses]);
+
   // Citation Inspector State
   const [activeCitation, setActiveCitation] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -166,43 +205,37 @@ export default function App() {
   const handleCreateCourse = async (newCourseData) => {
     const created = await createCourse(newCourseData);
     await fetchCourses();
-    setActiveCourse(created);
-    setCurrentView('course-workspace');
+    navigateView('course-workspace', created);
     return created;
   };
 
   const handleJoinCourse = async (inviteCode) => {
     const joined = await joinCourseByInviteCode(inviteCode);
     await fetchCourses();
-    setActiveCourse(joined);
-    setCurrentView('course-workspace');
+    navigateView('course-workspace', joined);
     return joined;
   };
 
   const handleDeleteCourse = async (courseId) => {
     await deleteCourse(courseId);
     if (activeCourse && activeCourse.id === courseId) {
-      setActiveCourse(null);
-      if (currentView === 'course-workspace') setCurrentView('courses');
+      if (currentView === 'course-workspace') navigateView('courses', null);
     }
     await fetchCourses();
   };
 
   const handleOpenCourse = (course) => {
-    setActiveCourse(course);
-    setCurrentView('course-workspace');
+    navigateView('course-workspace', course);
   };
 
   const handleOpenStudioForCourse = (course, lectureId = null) => {
-    setActiveCourse(course);
     setActiveLectureId(lectureId);
-    setCurrentView('studio');
+    navigateView('studio', course);
   };
 
   const handleOpenLecture = (lectureId, course) => {
-    if (course) setActiveCourse(course);
     setActiveLectureId(lectureId);
-    setCurrentView('studio');
+    navigateView('studio', course);
   };
 
   const handleOpenCitation = useCallback((citationData) => {
@@ -271,16 +304,17 @@ export default function App() {
           currentView={currentView}
           isEducator={isEducator}
           onSelectView={(viewId) => {
-            setCurrentView(viewId);
             if (viewId === 'studio') {
               setActiveLectureId(null);
             }
+            navigateView(viewId);
           }}
           activeCourse={activeCourse}
           onClearActiveCourse={() => {
-            setActiveCourse(null);
             if (currentView === 'course-workspace') {
-              setCurrentView('courses');
+              navigateView('courses', null);
+            } else {
+              setActiveCourse(null);
             }
           }}
         />
@@ -293,12 +327,11 @@ export default function App() {
                 courses={courses}
                 chunkCount={chunkCount}
                 currentUser={currentUser}
-                onNavigate={(viewId) => setCurrentView(viewId)}
+                onNavigate={(viewId) => navigateView(viewId)}
                 onOpenCourse={handleOpenCourse}
                 onOpenStudio={(course) => {
-                  if (course) setActiveCourse(course);
                   setActiveLectureId(null);
-                  setCurrentView('studio');
+                  navigateView('studio', course);
                 }}
               />
             )}
@@ -321,7 +354,7 @@ export default function App() {
               <CourseWorkspace
                 course={activeCourse}
                 isEducator={isEducator || activeCourse.my_role === 'professor'}
-                onBackToCourses={() => setCurrentView('courses')}
+                onBackToCourses={() => navigateView('courses', null)}
                 onOpenStudioForCourse={(course) => handleOpenStudioForCourse(course)}
                 onOpenCitation={handleOpenCitation}
                 onOpenLecture={handleOpenLecture}
@@ -344,7 +377,7 @@ export default function App() {
                   fetchCourses();
                 }}
                 onCitationClick={handleOpenCitation}
-                onNavigateCourses={() => setCurrentView('courses')}
+                onNavigateCourses={() => navigateView('courses')}
               />
             )}
 
@@ -354,7 +387,7 @@ export default function App() {
                 courses={courses}
                 currentUser={currentUser}
                 onOpenCourse={handleOpenCourse}
-                onOpenTutor={() => setCurrentView('ask-ai')}
+                onOpenTutor={() => navigateView('ask-ai')}
                 onJoinCourse={handleJoinCourse}
               />
             )}
@@ -368,9 +401,9 @@ export default function App() {
                 onOpenCitation={handleOpenCitation}
                 onBackToCourse={() => {
                   if (activeCourse) {
-                    setCurrentView('course-workspace');
+                    navigateView('course-workspace', activeCourse);
                   } else {
-                    setCurrentView('courses');
+                    navigateView('courses', null);
                   }
                 }}
               />
