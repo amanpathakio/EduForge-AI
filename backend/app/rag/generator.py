@@ -79,8 +79,13 @@ def generate_grounded_answer(
     try:
         genai.configure(api_key=api_key)
         
-        # Try available Gemini models in order of preference
-        model_names = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-pro"]
+        # Try available active Gemini models in order of preference with automatic fallback
+        model_names = [
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-flash-latest",
+            "gemini-2.5-pro",
+        ]
         raw_answer = None
         last_error = None
 

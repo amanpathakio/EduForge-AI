@@ -47,7 +47,14 @@ def _call_gemini(prompt: str) -> str:
         )
 
     genai.configure(api_key=api_key)
-    model_names = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-pro"]
+    # Gemini AI Studio free tier limits quota per model (e.g. gemini-2.5-flash has 20 RPD).
+    # Maintain a robust fallback chain across active models so quota exhaustion on one model cascades to the next.
+    model_names = [
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-flash-latest",
+        "gemini-2.5-pro",
+    ]
     last_error = None
 
     for model_name in model_names:
@@ -55,14 +62,12 @@ def _call_gemini(prompt: str) -> str:
             model = genai.GenerativeModel(model_name)
             response = model.generate_content(prompt)
             if response and response.text:
+                logger.info(f"Lecture script successfully generated using Gemini model '{model_name}'.")
                 return response.text.strip()
         except Exception as e:
             err_str = str(e).lower()
             logger.warning(f"Failed to generate content with model '{model_name}': {str(e)}")
             last_error = e
-            # If rate limited / quota exhausted, stop retrying models on the same exhausted API key
-            if "429" in err_str or "quota" in err_str or "resourceexhausted" in err_str:
-                break
 
     raise HTTPException(
         status_code=status.HTTP_502_BAD_GATEWAY,
