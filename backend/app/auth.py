@@ -62,6 +62,7 @@ def create_access_token(profile: Profile) -> str:
     payload = {
         "sub": profile.id,
         "email": profile.email,
+        "full_name": profile.full_name,
         "role": profile.role,
         "iss": LOCAL_ISSUER,
         "aud": LOCAL_AUDIENCE,
@@ -147,17 +148,31 @@ def get_current_user(
     profile = db.get(Profile, subject)
     if not profile:
         if claims.get("iss") == LOCAL_ISSUER:
-            _unauthorized("Account no longer exists.")
-        # First login via external Supabase identity provider defaults safely to student.
-        profile = Profile(
-            id=subject,
-            email=claims.get("email"),
-            role="student",
-            auth_provider="supabase",
-        )
-        db.add(profile)
-        db.commit()
-        db.refresh(profile)
+            # Self-heal profile from verified cryptographic JWT claims if container restarted/reset
+            email = claims.get("email") or f"{subject}@eduforge.local"
+            role = claims.get("role") or "student"
+            full_name = claims.get("full_name") or (email.split("@")[0] if "@" in email else "User")
+            profile = Profile(
+                id=subject,
+                email=email,
+                full_name=full_name,
+                role=role,
+                auth_provider="local",
+            )
+            db.add(profile)
+            db.commit()
+            db.refresh(profile)
+        else:
+            # First login via external Supabase identity provider defaults safely to student.
+            profile = Profile(
+                id=subject,
+                email=claims.get("email"),
+                role="student",
+                auth_provider="supabase",
+            )
+            db.add(profile)
+            db.commit()
+            db.refresh(profile)
     return profile
 
 

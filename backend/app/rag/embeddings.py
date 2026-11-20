@@ -10,18 +10,35 @@ class EmbeddingError(Exception):
 
 class EmbeddingManager:
     """
-    Manages vector embeddings using BAAI/bge-small-en-v1.5 via SentenceTransformers.
-    Implements a lazy-loaded singleton instance.
+    Manages vector embeddings using Gemini API (models/gemini-embedding-001) with
+    SentenceTransformers fallback. Using Gemini avoids 512MB RAM OOM crashes on free cloud hosting.
     """
     _instance = None
     _model = None
+    _use_gemini = None
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(EmbeddingManager, cls).__new__(cls)
         return cls._instance
 
-    def _get_model(self) -> Any:
+    def _should_use_gemini(self) -> bool:
+        if self._use_gemini is None:
+            key = (settings.GEMINI_API_KEY or "").strip()
+            self._use_gemini = bool(key and key != "your_gemini_api_key_here")
+        return self._use_gemini
+
+    def _embed_with_gemini(self, content: Any, task_type: str):
+        import google.generativeai as genai
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        response = genai.embed_content(
+            model="models/gemini-embedding-001",
+            content=content,
+            task_type=task_type,
+        )
+        return response["embedding"]
+
+    def _get_local_model(self) -> Any:
         if self._model is None:
             from sentence_transformers import SentenceTransformer
             model_name = settings.EMBEDDING_MODEL_NAME
@@ -49,8 +66,23 @@ class EmbeddingManager:
         """
         if not texts:
             return []
+
+        if self._should_use_gemini():
+            try:
+                logger.info(f"Generating Gemini embeddings for {len(texts)} chunk(s)...")
+                results = []
+                batch_size = 50
+                for i in range(0, len(texts), batch_size):
+                    batch = texts[i:i + batch_size]
+                    emb = self._embed_with_gemini(batch, task_type="retrieval_document")
+                    results.extend(emb)
+                logger.info(f"Gemini embeddings generated successfully. Count: {len(results)}, Dim: {len(results[0])}.")
+                return results
+            except Exception as e:
+                logger.warning(f"Gemini embedding failed ({str(e)}), falling back to local SentenceTransformers...")
+
         try:
-            model = self._get_model()
+            model = self._get_local_model()
             logger.info(f"Embeddings generating for {len(texts)} chunk(s)...")
             embeddings = model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
             logger.info(f"Embeddings generated successfully. Vector dimension: {len(embeddings[0])}.")
@@ -71,8 +103,16 @@ class EmbeddingManager:
         """
         if not query or not query.strip():
             raise EmbeddingError("Cannot embed an empty query.")
+
+        if self._should_use_gemini():
+            try:
+                emb = self._embed_with_gemini(query, task_type="retrieval_query")
+                return emb
+            except Exception as e:
+                logger.warning(f"Gemini query embedding failed ({str(e)}), falling back to local SentenceTransformers...")
+
         try:
-            model = self._get_model()
+            model = self._get_local_model()
             embedding = model.encode(query, normalize_embeddings=True, show_progress_bar=False)
             return embedding.tolist()
         except Exception as e:
