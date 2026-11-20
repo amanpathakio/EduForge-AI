@@ -30,6 +30,7 @@ class VectorStoreManager:
                 )
                 self._collection = self._client.get_or_create_collection(
                     name=self.collection_name,
+                    embedding_function=None,
                     metadata={"hnsw:space": "cosine"}
                 )
                 logger.info(f"ChromaDB collection '{self.collection_name}' ready. Item count: {self._collection.count()}")

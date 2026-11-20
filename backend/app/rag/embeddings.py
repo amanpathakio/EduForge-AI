@@ -79,7 +79,8 @@ class EmbeddingManager:
                 logger.info(f"Gemini embeddings generated successfully. Count: {len(results)}, Dim: {len(results[0])}.")
                 return results
             except Exception as e:
-                logger.warning(f"Gemini embedding failed ({str(e)}), falling back to local SentenceTransformers...")
+                logger.error(f"Gemini embedding failed: {str(e)}")
+                raise EmbeddingError(f"Gemini embedding failed: {str(e)}")
 
         try:
             model = self._get_local_model()
@@ -109,7 +110,8 @@ class EmbeddingManager:
                 emb = self._embed_with_gemini(query, task_type="retrieval_query")
                 return emb
             except Exception as e:
-                logger.warning(f"Gemini query embedding failed ({str(e)}), falling back to local SentenceTransformers...")
+                logger.error(f"Gemini query embedding failed: {str(e)}")
+                raise EmbeddingError(f"Gemini query embedding failed: {str(e)}")
 
         try:
             model = self._get_local_model()

@@ -55,6 +55,25 @@ def liveness_check():
     """Public liveness only; detailed service diagnostics remain authenticated."""
     return LivenessResponse(status="healthy")
 
+@router.get("/status/embed-test")
+def embed_diagnostics():
+    from app.rag.embeddings import embedding_manager
+    try:
+        vecs = embedding_manager.embed_documents(["Test phrase for embedding verification"])
+        return {
+            "status": "ok",
+            "using_gemini": embedding_manager._should_use_gemini(),
+            "count": len(vecs),
+            "dim": len(vecs[0]) if vecs else 0
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "using_gemini": embedding_manager._should_use_gemini(),
+            "error": str(e),
+            "type": type(e).__name__
+        }
+
 @router.get("/health", response_model=HealthResponse)
 @router.get("/status", response_model=HealthResponse)
 def health_check():
