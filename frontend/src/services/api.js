@@ -504,6 +504,17 @@ export async function cloneProfessorVoice(formData) {
   return res.json();
 }
 
+export async function deleteClonedVoice(voiceId) {
+  const res = await apiFetch(`/voices/${encodeURIComponent(voiceId)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to delete cloned voice');
+  }
+  return res.json();
+}
+
 export async function getLectureVideoManifest(lectureId, voiceId = null) {
   const query = voiceId ? `?voice_id=${encodeURIComponent(voiceId)}` : '';
   const res = await apiFetch(`/lectures/${lectureId}/video-manifest${query}`, {

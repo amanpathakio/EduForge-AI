@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getAvailableVoices, cloneProfessorVoice } from '../services/api';
+import { getAvailableVoices, cloneProfessorVoice, deleteClonedVoice } from '../services/api';
 
 export default function VoiceCloneModal({
   isOpen,
@@ -11,6 +11,7 @@ export default function VoiceCloneModal({
   const [isConfigured, setIsConfigured] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('select'); // 'select' | 'clone'
+  const [deletingVoiceId, setDeletingVoiceId] = useState(null);
 
   // Clone Form State
   const [professorName, setProfessorName] = useState('');
@@ -79,6 +80,41 @@ export default function VoiceCloneModal({
       setPlayingVoiceId(null);
       audioRef.current = null;
     };
+  };
+
+  const handleDeleteVoice = async (e, voice) => {
+    e.stopPropagation();
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the cloned voice "${voice.name}"? This will remove it from ElevenLabs.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeletingVoiceId(voice.voice_id);
+      await deleteClonedVoice(voice.voice_id);
+
+      // Stop audio preview if this voice was playing
+      if (playingVoiceId === voice.voice_id) {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current = null;
+        }
+        setPlayingVoiceId(null);
+      }
+
+      // If active voice was deleted, fallback to another voice
+      if (selectedVoiceId === voice.voice_id && onSelectVoice) {
+        const fallback = voices.find((v) => v.voice_id !== voice.voice_id);
+        if (fallback) onSelectVoice(fallback);
+      }
+
+      // Reload list of voices
+      await loadVoices();
+    } catch (err) {
+      alert(err.message || 'Failed to delete cloned voice.');
+    } finally {
+      setDeletingVoiceId(null);
+    }
   };
 
   const handleFileChange = (e) => {
@@ -208,6 +244,8 @@ export default function VoiceCloneModal({
                 {voices.map((voice) => {
                   const isSelected = selectedVoiceId === voice.voice_id;
                   const isPlaying = playingVoiceId === voice.voice_id;
+                  const isCloned = voice.is_cloned || voice.category === 'Cloned Professor';
+                  const isDeleting = deletingVoiceId === voice.voice_id;
 
                   return (
                     <div
@@ -222,7 +260,20 @@ export default function VoiceCloneModal({
                         <div className="voice-card-meta">
                           <div className="voice-name-row">
                             <h4>{voice.name}</h4>
-                            {isSelected && <span className="active-badge">Active</span>}
+                            <div className="voice-badges-group">
+                              {isSelected && <span className="active-badge">Active</span>}
+                              {isCloned && (
+                                <button
+                                  type="button"
+                                  className="delete-voice-icon-btn"
+                                  title="Delete this cloned voice permanently"
+                                  disabled={isDeleting}
+                                  onClick={(e) => handleDeleteVoice(e, voice)}
+                                >
+                                  {isDeleting ? '…' : '✕'}
+                                </button>
+                              )}
+                            </div>
                           </div>
                           <span className="voice-tags">
                             <span className="voice-category-tag">{voice.category || 'Academic'}</span>
@@ -245,16 +296,29 @@ export default function VoiceCloneModal({
                         >
                           {isPlaying ? '⏹ Stop' : '▶ Preview Sample'}
                         </button>
-                        <button
-                          type="button"
-                          className="button button-sm button-secondary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectVoice && onSelectVoice(voice);
-                          }}
-                        >
-                          {isSelected ? 'Selected' : 'Use Voice'}
-                        </button>
+                        <div className="voice-action-buttons">
+                          {isCloned && (
+                            <button
+                              type="button"
+                              className="delete-voice-btn"
+                              title="Delete this cloned voice from ElevenLabs"
+                              disabled={isDeleting}
+                              onClick={(e) => handleDeleteVoice(e, voice)}
+                            >
+                              {isDeleting ? 'Deleting…' : 'Delete'}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="button button-sm button-secondary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectVoice && onSelectVoice(voice);
+                            }}
+                          >
+                            {isSelected ? 'Selected' : 'Use Voice'}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );

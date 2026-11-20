@@ -93,7 +93,7 @@ class ElevenLabsService:
         Returns list of voices. If ElevenLabs API Key is present, fetches
         cloned and account voices from ElevenLabs API; otherwise returns curated presets.
         """
-        voices = list(CURATED_PROFESSOR_VOICES)
+        voices = [{**v, "is_cloned": False} for v in CURATED_PROFESSOR_VOICES]
 
         if not cls.is_configured():
             return voices
@@ -118,7 +118,8 @@ class ElevenLabsService:
                                 "gender": v.get("labels", {}).get("gender", "neutral"),
                                 "accent": v.get("labels", {}).get("accent", "custom"),
                                 "description": v.get("description") or f"Custom cloned voice for {v.get('name')}",
-                                "preview_url": v.get("preview_url")
+                                "preview_url": v.get("preview_url"),
+                                "is_cloned": True,
                             })
                     if custom_voices:
                         voices = custom_voices + voices
@@ -196,6 +197,70 @@ class ElevenLabsService:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Internal error connecting to ElevenLabs voice cloning: {str(e)}"
+            )
+
+    @classmethod
+    def delete_voice(cls, voice_id: str) -> Dict[str, Any]:
+        """
+        Deletes a custom cloned voice from ElevenLabs and cleans up any local preview cache.
+        """
+        if not cls.is_configured():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="ElevenLabs API Key is not configured."
+            )
+
+        # Disallow deleting curated presets
+        for preset in CURATED_PROFESSOR_VOICES:
+            if preset["voice_id"] == voice_id or preset.get("elevenlabs_id") == voice_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Curated academic presets cannot be deleted."
+                )
+
+        try:
+            with httpx.Client(timeout=20.0) as client:
+                res = client.delete(
+                    f"{cls.BASE_URL}/voices/{voice_id}",
+                    headers={"xi-api-key": settings.ELEVENLABS_API_KEY}
+                )
+                if res.status_code not in (200, 204):
+                    err_detail = res.text
+                    try:
+                        err_detail = res.json().get("detail", {}).get("message", res.text)
+                    except Exception:
+                        pass
+                    # If 404, voice is already deleted in ElevenLabs
+                    if res.status_code != 404:
+                        logger.warning(f"ElevenLabs voice delete returned status {res.status_code}: {err_detail}")
+                        raise HTTPException(
+                            status_code=res.status_code,
+                            detail=f"ElevenLabs voice deletion failed: {err_detail}"
+                        )
+
+            # Clean up local preview cache if exists
+            preview_dir = Path(settings.AUDIO_DIR) / "previews"
+            clean_voice_id = voice_id.replace(" ", "_")[:64]
+            preview_path = preview_dir / f"preview_{clean_voice_id}.mp3"
+            if preview_path.exists():
+                try:
+                    preview_path.unlink()
+                except Exception as e:
+                    logger.warning(f"Failed deleting preview file: {e}")
+
+            logger.info(f"Cloned voice '{voice_id}' deleted successfully from ElevenLabs.")
+            return {
+                "status": "success",
+                "voice_id": voice_id,
+                "message": "Cloned voice deleted successfully."
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error in delete_voice: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error deleting voice: {str(e)}"
             )
 
     @classmethod

@@ -137,3 +137,13 @@ async def clone_professor_voice(
         audio_bytes=audio_bytes,
         filename=filename
     )
+
+@router.delete("/{voice_id}")
+def delete_professor_voice(
+    voice_id: str,
+    user: Profile = Depends(get_current_user)
+):
+    """
+    Permanently delete a custom cloned professor voice from ElevenLabs.
+    """
+    return ElevenLabsService.delete_voice(voice_id)

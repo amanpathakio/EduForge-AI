@@ -273,6 +273,70 @@
   color: #f87171;
 }
 
+.voice-badges-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.voice-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.delete-voice-btn {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  color: #f87171;
+  padding: 0.26rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.delete-voice-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+  transform: translateY(-1px);
+}
+
+.delete-voice-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.delete-voice-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  line-height: 1;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-voice-icon-btn:hover:not(:disabled) {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.delete-voice-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Voice Cloning Form */
 .voice-clone-form {
   padding: 1.5rem;
