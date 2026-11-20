@@ -50,11 +50,13 @@ class LivenessResponse(BaseModel):
     status: str
 
 @router.get("/health/live", response_model=LivenessResponse)
+@router.get("/status/live", response_model=LivenessResponse)
 def liveness_check():
     """Public liveness only; detailed service diagnostics remain authenticated."""
     return LivenessResponse(status="healthy")
 
 @router.get("/health", response_model=HealthResponse)
+@router.get("/status", response_model=HealthResponse)
 def health_check():
     """
     Check API health and status of vector store and Gemini configuration.

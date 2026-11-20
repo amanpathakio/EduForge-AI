@@ -17,15 +17,37 @@ async function apiFetch(path, options = {}) {
   return fetch(`${API_BASE_URL}${path}`, { ...options, headers: await authHeaders(options.headers || {}) });
 }
 
-export const API_HEALTH = `${API_BASE_URL}/health`;
+export const API_HEALTH = `${API_BASE_URL}/status`;
 export const API_UPLOAD = `${API_BASE_URL}/documents/upload`;
 export const API_CHAT = `${API_BASE_URL}/chat`;
 
 /**
  * Check backend health, vector store chunk count, and Gemini API key status.
+ * Uses /status (with /status/live, /health fallbacks) to avoid ad blocker ERR_BLOCKED_BY_CLIENT on /health.
  */
 export async function checkSystemHealth() {
-  // Check /health (or fallback to /health/live) to determine system status
+  // 1. Try /status
+  try {
+    const headers = await authHeaders();
+    const res = await fetch(`${API_BASE_URL}/status`, { headers });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // try fallback
+  }
+
+  // 2. Try public /status/live
+  try {
+    const response = await fetch(`${API_BASE_URL}/status/live`);
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch {
+    // try legacy fallback
+  }
+
+  // 3. Try legacy /health
   try {
     const headers = await authHeaders();
     const res = await fetch(`${API_BASE_URL}/health`, { headers });
@@ -33,9 +55,10 @@ export async function checkSystemHealth() {
       return await res.json();
     }
   } catch {
-    // If authed /health fails, try public /health/live below
+    // try legacy /health/live
   }
 
+  // 4. Try legacy /health/live
   try {
     const response = await fetch(`${API_BASE_URL}/health/live`);
     if (response.ok) {

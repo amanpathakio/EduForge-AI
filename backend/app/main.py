@@ -92,6 +92,7 @@ else:
             "service": "EduForge AI Backend API",
             "documentation": "/docs",
             "health": "/health/live",
+            "status_url": "/status",
             "frontend": "https://edu-forge-ai-jade.vercel.app"
         }
 
