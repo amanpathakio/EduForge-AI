@@ -1,4 +1,7 @@
-const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || '');
+const DEFAULT_API_BASE = 'https://eduforge-ai-mvkk.onrender.com';
+const API_BASE_URL = import.meta.env.DEV
+  ? ''
+  : (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE);
 const STORAGE_KEY = 'eduforge.session';
 const LEGACY_SUPABASE_KEY = 'eduforge.supabase.session';
 
@@ -27,10 +30,16 @@ function writeSession(session) {
 
 async function parseError(res, fallback) {
   try {
-    const data = await res.json();
-    if (typeof data?.detail === 'string') return data.detail;
-    if (Array.isArray(data?.detail) && data.detail[0]?.msg) return data.detail[0].msg;
-    return data?.message || fallback;
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      if (typeof data?.detail === 'string') return data.detail;
+      if (Array.isArray(data?.detail) && data.detail[0]?.msg) return data.detail[0].msg;
+      return data?.message || fallback;
+    } catch {
+      if (text && text.length < 200 && !text.includes('<html')) return text;
+      return fallback;
+    }
   } catch {
     return fallback;
   }
@@ -70,7 +79,7 @@ async function authFetch(url, options) {
     return await fetch(url, options);
   } catch (err) {
     if (err?.name === 'TypeError' || err?.message?.includes('fetch')) {
-      throw new Error('Backend service is currently unreachable (port 8010). Please verify the server is running.');
+      throw new Error('Backend service is currently unreachable. Please verify server connectivity.');
     }
     throw err;
   }
@@ -85,7 +94,12 @@ export async function loginAccount({ email, password }) {
   if (!res.ok) {
     throw new Error(await parseError(res, 'Sign-in failed.'));
   }
-  const session = await res.json();
+  let session = null;
+  try {
+    session = await res.json();
+  } catch {
+    throw new Error('Unexpected response format from authentication service.');
+  }
   writeSession(session);
   return session;
 }
@@ -105,7 +119,12 @@ export async function registerAccount({ email, password, fullName, requestedRole
   if (!res.ok) {
     throw new Error(await parseError(res, 'Account creation failed.'));
   }
-  const session = await res.json();
+  let session = null;
+  try {
+    session = await res.json();
+  } catch {
+    throw new Error('Unexpected response format from registration service.');
+  }
   writeSession(session);
   return session;
 }
@@ -119,7 +138,12 @@ export async function resetPasswordAccount({ email, newPassword }) {
   if (!res.ok) {
     throw new Error(await parseError(res, 'Password reset failed.'));
   }
-  const session = await res.json();
+  let session = null;
+  try {
+    session = await res.json();
+  } catch {
+    throw new Error('Unexpected response format from password reset service.');
+  }
   writeSession(session);
   return session;
 }

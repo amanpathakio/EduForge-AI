@@ -4,8 +4,11 @@
 
 // In local Vite development, use the same-origin proxy configured in
 // vite.config.js. It avoids browser CORS/network differences between
-// localhost and 127.0.0.1. Production uses the explicitly configured API.
-const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || '');
+// localhost and 127.0.0.1. Production uses the explicitly configured API or the live Render backend.
+const DEFAULT_API_BASE = 'https://eduforge-ai-mvkk.onrender.com';
+const API_BASE_URL = import.meta.env.DEV
+  ? ''
+  : (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE);
 import { getAccessToken } from '../lib/auth';
 
 async function authHeaders(extra = {}) {

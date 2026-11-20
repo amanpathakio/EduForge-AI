@@ -1,6 +1,50 @@
 {
   "rewrites": [
     {
+      "source": "/auth/:path*",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/auth/:path*"
+    },
+    {
+      "source": "/status/:path*",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/status/:path*"
+    },
+    {
+      "source": "/status",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/status"
+    },
+    {
+      "source": "/health/:path*",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/health/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/health"
+    },
+    {
+      "source": "/courses/:path*",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/courses/:path*"
+    },
+    {
+      "source": "/courses",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/courses"
+    },
+    {
+      "source": "/documents/:path*",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/documents/:path*"
+    },
+    {
+      "source": "/chat/:path*",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/chat/:path*"
+    },
+    {
+      "source": "/chat",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/chat"
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/admin/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
