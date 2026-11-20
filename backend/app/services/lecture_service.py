@@ -8,8 +8,6 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select, delete
 
-import google.generativeai as genai
-
 from app.models.course import Course
 from app.models.lecture import Lecture, LectureSlide
 from app.models.citation import Citation
@@ -40,6 +38,7 @@ def _clean_json_markdown(text: str) -> str:
 
 def _call_gemini(prompt: str) -> str:
     """Call Google Gemini API with fallback models."""
+    import google.generativeai as genai
     api_key = settings.GEMINI_API_KEY
     if not api_key or api_key == "your_gemini_api_key_here":
         raise HTTPException(

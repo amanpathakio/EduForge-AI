@@ -1,6 +1,4 @@
 import logging
-import chromadb
-from chromadb.config import Settings as ChromaSettings
 from typing import List, Dict, Any
 from app.config import settings
 
@@ -23,8 +21,13 @@ class VectorStoreManager:
     def _get_collection(self):
         if self._collection is None:
             try:
+                import chromadb
+                from chromadb.config import Settings as ChromaSettings
                 logger.info(f"Initializing persistent ChromaDB client at '{self.persist_directory}'...")
-                self._client = chromadb.PersistentClient(path=self.persist_directory)
+                self._client = chromadb.PersistentClient(
+                    path=self.persist_directory,
+                    settings=ChromaSettings(anonymized_telemetry=False)
+                )
                 self._collection = self._client.get_or_create_collection(
                     name=self.collection_name,
                     metadata={"hnsw:space": "cosine"}

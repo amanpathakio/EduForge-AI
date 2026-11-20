@@ -1,6 +1,5 @@
 import logging
 from typing import List, Dict, Any, Tuple
-import google.generativeai as genai
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -28,6 +27,7 @@ def generate_grounded_answer(
     Returns:
         Tuple of (formatted_answer_string, retrieved_chunks, list_of_source_strings).
     """
+    import google.generativeai as genai
     # Build unique source citations list from metadata
     sources_set = set()
     sources_list = []

@@ -1,6 +1,5 @@
 import logging
-from typing import List
-from sentence_transformers import SentenceTransformer
+from typing import List, Any
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -22,8 +21,9 @@ class EmbeddingManager:
             cls._instance = super(EmbeddingManager, cls).__new__(cls)
         return cls._instance
 
-    def _get_model(self) -> SentenceTransformer:
+    def _get_model(self) -> Any:
         if self._model is None:
+            from sentence_transformers import SentenceTransformer
             model_name = settings.EMBEDDING_MODEL_NAME
             logger.info(f"Loading embedding model: '{model_name}'...")
             try:
