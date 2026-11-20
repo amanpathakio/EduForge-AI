@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
     EDUCATOR_ACCESS_CODE: str = ""
+    ADMIN_ACCESS_CODE: str = "EDUFORGE-ADMIN-2026"
     AUTH_REQUIRED: bool = True
     FRONTEND_ORIGINS: str = "http://localhost:5173"
 

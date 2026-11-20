@@ -578,35 +578,41 @@ export async function deleteUserAccount(userId) {
   return res.json();
 }
 
-export async function getFacultyKeys() {
-  const res = await apiFetch('/admin/faculty-keys');
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to load faculty keys');
-  }
-  return res.json();
-}
-
-export async function addFacultyKey(code) {
-  const res = await apiFetch('/admin/faculty-keys', {
+export async function createAdminUser(userData) {
+  const res = await apiFetch('/admin/users', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code }),
+    body: JSON.stringify(userData),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to add faculty key');
+    throw new Error(err.detail || 'Failed to provision user account');
   }
   return res.json();
 }
 
-export async function promoteSelfToAdmin() {
-  const res = await apiFetch('/admin/promote-me', {
+export async function adminResetPassword(userId, newPassword) {
+  const res = await apiFetch(`/admin/users/${userId}/reset-password`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ new_password: newPassword }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to promote account to administrator');
+    throw new Error(err.detail || 'Failed to reset password');
+  }
+  return res.json();
+}
+
+export async function upgradeUserRole(code) {
+  const res = await apiFetch('/auth/upgrade-role', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ educator_code: code }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Invalid authorization code');
   }
   return res.json();
 }

@@ -36,7 +36,7 @@ class RegisterRequest(BaseModel):
     email: str = Field(..., min_length=3, max_length=320)
     password: str = Field(..., min_length=8, max_length=128)
     full_name: Optional[str] = Field(default=None, max_length=160)
-    requested_role: Literal["student", "professor"] = "student"
+    requested_role: Literal["student", "professor", "admin"] = "student"
     educator_code: Optional[str] = Field(default=None, max_length=128)
 
 
@@ -71,12 +71,22 @@ def _verify_educator_code(supplied_code: Optional[str]) -> bool:
     return any(hmac.compare_digest(candidate, code) for code in valid_codes)
 
 
+def _verify_admin_code(supplied_code: Optional[str]) -> bool:
+    configured = (settings.ADMIN_ACCESS_CODE or "").strip()
+    candidate = (supplied_code or "").strip()
+    if not configured or not candidate:
+        return False
+    valid_codes = [c.strip() for c in configured.split(",") if c.strip()]
+    return any(hmac.compare_digest(candidate, code) for code in valid_codes)
+
+
 @router.get("/capabilities")
 def auth_capabilities():
     """Public capability advertisement for login UI configuration."""
     return {
         "local_auth_enabled": True,
         "educator_code_configured": bool((settings.EDUCATOR_ACCESS_CODE or "").strip()),
+        "admin_code_configured": bool((settings.ADMIN_ACCESS_CODE or "").strip()),
         "supabase_configured": bool(settings.SUPABASE_URL),
     }
 
@@ -89,7 +99,14 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="An account with this email already exists.")
 
     assigned_role = "student"
-    if payload.requested_role == "professor":
+    if payload.requested_role == "admin":
+        if not _verify_admin_code(payload.educator_code):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid administrator access code. Enter a verified administrator key.",
+            )
+        assigned_role = "admin"
+    elif payload.requested_role == "professor":
         if not (settings.EDUCATOR_ACCESS_CODE or "").strip():
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -164,19 +181,28 @@ def get_me(user: Profile = Depends(get_current_user)):
 
 
 @router.post("/upgrade-role", response_model=AuthTokenResponse)
-def upgrade_to_professor(
+def upgrade_role(
     payload: UpgradeRoleRequest,
     user: Profile = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Verify an educator access code on an existing account to unlock Professor Studio."""
-    if user.role in ("professor", "admin"):
+    """Verify an admin or educator access code on an existing account to unlock Elevated Roles."""
+    code = (payload.educator_code or "").strip()
+    if _verify_admin_code(code):
+        user.role = "admin"
+        db.commit()
+        db.refresh(user)
+        logger.info(f"User '{user.email}' elevated to platform Administrator.")
         return AuthTokenResponse(access_token=create_access_token(user), user=AuthUserRead.model_validate(user))
 
-    if not _verify_educator_code(payload.educator_code):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid educator access code.")
+    if _verify_educator_code(code):
+        user.role = "professor"
+        db.commit()
+        db.refresh(user)
+        logger.info(f"User '{user.email}' elevated to Professor.")
+        return AuthTokenResponse(access_token=create_access_token(user), user=AuthUserRead.model_validate(user))
 
-    user.role = "professor"
-    db.commit()
-    db.refresh(user)
-    return AuthTokenResponse(access_token=create_access_token(user), user=AuthUserRead.model_validate(user))
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Invalid access code. Please enter a valid educator or administrator key."
+    )

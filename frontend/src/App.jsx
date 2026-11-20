@@ -99,14 +99,17 @@ export default function App() {
 
   const currentUser = session?.user || null;
   const isEducator = currentUser?.role === 'professor' || currentUser?.role === 'admin';
+  const isAdmin = currentUser?.role === 'admin';
 
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'courses' | 'course-workspace' | 'ask-ai' | 'student-learning' | 'studio' | 'documents'
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'courses' | 'course-workspace' | 'ask-ai' | 'student-learning' | 'studio' | 'documents' | 'admin-panel'
   useEffect(() => {
     if (!currentUser) return;
-    if (!isEducator && ['dashboard', 'studio', 'documents', 'admin-panel'].includes(currentView)) {
+    if (!isAdmin && currentView === 'admin-panel') {
+      setCurrentView(isEducator ? 'dashboard' : 'student-learning');
+    } else if (!isEducator && ['dashboard', 'studio', 'documents'].includes(currentView)) {
       setCurrentView('student-learning');
     }
-  }, [currentUser, isEducator, currentView]);
+  }, [currentUser, isEducator, isAdmin, currentView]);
   const [healthStatus, setHealthStatus] = useState('connecting');
   const [chunkCount, setChunkCount] = useState(0);
   const [geminiConfigured, setGeminiConfigured] = useState(true);
@@ -304,6 +307,7 @@ export default function App() {
         <SidebarNav
           currentView={currentView}
           isEducator={isEducator}
+          isAdmin={isAdmin}
           onSelectView={(viewId) => {
             if (viewId === 'studio') {
               setActiveLectureId(null);
@@ -426,7 +430,7 @@ export default function App() {
             )}
 
             {/* 8. SUPER ADMIN PANEL */}
-            {currentView === 'admin-panel' && isEducator && (
+            {currentView === 'admin-panel' && isAdmin && (
               <AdminPanelView
                 currentUser={currentUser}
                 onRoleUpdated={(newRole) => {
