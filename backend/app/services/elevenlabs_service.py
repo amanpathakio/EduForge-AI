@@ -154,6 +154,10 @@ class ElevenLabsService:
             content_type = "audio/wav"
         elif filename.lower().endswith(".m4a"):
             content_type = "audio/m4a"
+        elif filename.lower().endswith(".webm"):
+            content_type = "audio/webm"
+        elif filename.lower().endswith(".ogg"):
+            content_type = "audio/ogg"
 
         try:
             with httpx.Client(timeout=60.0) as client:

@@ -110,7 +110,7 @@ async def clone_professor_voice(
         )
 
     # Validate audio file extension
-    valid_extensions = (".mp3", ".wav", ".m4a", ".aac", ".ogg")
+    valid_extensions = (".mp3", ".wav", ".m4a", ".aac", ".ogg", ".webm")
     filename = file.filename or "sample.mp3"
     if not any(filename.lower().endswith(ext) for ext in valid_extensions):
         raise HTTPException(

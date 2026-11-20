@@ -15,11 +15,20 @@ export default function VoiceCloneModal({
 
   // Clone Form State
   const [professorName, setProfessorName] = useState('');
+  const [cloneAudioMode, setCloneAudioMode] = useState('record'); // 'record' | 'upload'
   const [audioFile, setAudioFile] = useState(null);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState(null);
   const [isCloning, setIsCloning] = useState(false);
   const [cloneError, setCloneError] = useState('');
   const [cloneSuccess, setCloneSuccess] = useState('');
+
+  // In-browser microphone recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
+  const streamRef = useRef(null);
 
   // Audio preview playback for preset voices
   const [playingVoiceId, setPlayingVoiceId] = useState(null);
@@ -33,6 +42,9 @@ export default function VoiceCloneModal({
         audioRef.current = null;
       }
       setPlayingVoiceId(null);
+      if (isRecording) {
+        stopRecording();
+      }
       return;
     }
 
@@ -115,6 +127,102 @@ export default function VoiceCloneModal({
     } finally {
       setDeletingVoiceId(null);
     }
+  };
+
+  const startRecording = async () => {
+    try {
+      setCloneError('');
+      setCloneSuccess('');
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Your browser does not support live microphone recording. Please use file upload.');
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
+      streamRef.current = stream;
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : 'audio/mp4';
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const ext = mimeType.includes('mp4') ? 'm4a' : 'webm';
+        const file = new File([audioBlob], `recorded_professor_voice_${Date.now()}.${ext}`, {
+          type: audioBlob.type || 'audio/webm',
+        });
+        setAudioFile(file);
+        if (audioPreviewUrl) {
+          URL.revokeObjectURL(audioPreviewUrl);
+        }
+        setAudioPreviewUrl(URL.createObjectURL(audioBlob));
+
+        // Stop media stream tracks to release microphone
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
+        }
+      };
+
+      mediaRecorder.start(250);
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime((prev) => {
+          if (prev >= 120) {
+            stopRecording();
+            return 120;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    } catch (err) {
+      console.error('Microphone recording error:', err);
+      setCloneError(err.message || 'Microphone access denied. Please allow microphone permissions or upload an audio file.');
+      setIsRecording(false);
+    }
+  };
+
+  const stopRecording = () => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {
+        // ignore
+      }
+    }
+    setIsRecording(false);
+  };
+
+  const resetRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    }
+    setAudioFile(null);
+    if (audioPreviewUrl) {
+      URL.revokeObjectURL(audioPreviewUrl);
+      setAudioPreviewUrl(null);
+    }
+    setRecordingTime(0);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleFileChange = (e) => {
@@ -361,32 +469,136 @@ export default function VoiceCloneModal({
 
             <div className="field-group">
               <label className="field-label">
-                Audio Sample (MP3, WAV, M4A, AAC) <span className="required-star">*</span>
+                Voice Audio Source <span className="required-star">*</span>
               </label>
-              <div className="file-drop-area">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="audio/mp3,audio/wav,audio/m4a,audio/aac,audio/ogg"
-                  onChange={handleFileChange}
+
+              {/* Mode Selector: Record Live vs Upload */}
+              <div className="clone-mode-selector">
+                <button
+                  type="button"
+                  className={`clone-mode-btn ${cloneAudioMode === 'record' ? 'active' : ''}`}
+                  onClick={() => {
+                    setCloneAudioMode('record');
+                    resetRecording();
+                  }}
                   disabled={isCloning}
-                />
-                <div className="drop-info">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" y1="19" x2="12" y2="23" />
-                    <line x1="8" y1="23" x2="16" y2="23" />
-                  </svg>
-                  <span>{audioFile ? audioFile.name : 'Click to select or drop audio sample'}</span>
-                  <small>Clean speech with minimal background noise yields the highest fidelity.</small>
-                </div>
+                >
+                  <span>🎙️</span>
+                  <span>Record Live Microphone</span>
+                </button>
+                <button
+                  type="button"
+                  className={`clone-mode-btn ${cloneAudioMode === 'upload' ? 'active' : ''}`}
+                  onClick={() => {
+                    setCloneAudioMode('upload');
+                    resetRecording();
+                  }}
+                  disabled={isCloning}
+                >
+                  <span>📁</span>
+                  <span>Upload Audio File</span>
+                </button>
               </div>
 
-              {audioPreviewUrl && (
-                <div className="audio-uploaded-preview">
-                  <span>Selected Sample:</span>
-                  <audio controls src={audioPreviewUrl} />
+              {/* MODE 1: LIVE RECORDING */}
+              {cloneAudioMode === 'record' && (
+                <div className="live-recorder-wrapper">
+                  <div className="reading-script-box">
+                    <span className="reading-script-label">📖 Recommended script to read aloud (30–60s):</span>
+                    <p className="reading-script-text">
+                      “Welcome to today’s lecture. In this course, we will explore theoretical foundations,
+                      practical computational models, and core real-world applications with precision and clarity.
+                      Let us begin by analyzing our primary architectural principles.”
+                    </p>
+                  </div>
+
+                  <div className={`live-recorder-panel ${isRecording ? 'recording' : ''}`}>
+                    {!audioFile && !isRecording && (
+                      <button
+                        type="button"
+                        className="record-btn-start"
+                        onClick={startRecording}
+                        disabled={isCloning}
+                      >
+                        <span className="record-dot" />
+                        <span>Start Live Recording (Mic)</span>
+                      </button>
+                    )}
+
+                    {isRecording && (
+                      <div className="recording-active-state">
+                        <div className="recording-pulsing-badge">
+                          <span className="pulse-dot" />
+                          <span>RECORDING LIVE AUDIO</span>
+                        </div>
+                        <div className="recording-timer">
+                          {Math.floor(recordingTime / 60).toString().padStart(2, '0')}:
+                          {(recordingTime % 60).toString().padStart(2, '0')}
+                          <small> / 02:00</small>
+                        </div>
+                        <p className="recording-hint">Speak clearly in your natural pedagogical cadence...</p>
+                        <button
+                          type="button"
+                          className="record-btn-stop"
+                          onClick={stopRecording}
+                        >
+                          ⏹ Stop &amp; Review Recording
+                        </button>
+                      </div>
+                    )}
+
+                    {audioFile && !isRecording && (
+                      <div className="recording-complete-state">
+                        <div className="recording-success-pill">
+                          <span>✓ Live recording ready ({recordingTime}s)</span>
+                          <button
+                            type="button"
+                            className="rerecord-btn"
+                            onClick={resetRecording}
+                            disabled={isCloning}
+                            title="Discard and record a new sample"
+                          >
+                            🔄 Re-record
+                          </button>
+                        </div>
+                        <div className="audio-uploaded-preview">
+                          <audio controls src={audioPreviewUrl} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* MODE 2: FILE UPLOAD */}
+              {cloneAudioMode === 'upload' && (
+                <div className="upload-file-wrapper">
+                  <div className="file-drop-area">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="audio/mp3,audio/wav,audio/m4a,audio/aac,audio/ogg,audio/webm"
+                      onChange={handleFileChange}
+                      disabled={isCloning}
+                    />
+                    <div className="drop-info">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                        <line x1="12" y1="19" x2="12" y2="23" />
+                        <line x1="8" y1="23" x2="16" y2="23" />
+                      </svg>
+                      <span>{audioFile ? audioFile.name : 'Click to select or drop audio sample'}</span>
+                      <small>Supports MP3, WAV, M4A, AAC, OGG, or WEBM (1–3 minutes).</small>
+                    </div>
+                  </div>
+
+                  {audioPreviewUrl && (
+                    <div className="audio-uploaded-preview">
+                      <span>Selected Sample:</span>
+                      <audio controls src={audioPreviewUrl} />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
