@@ -25,22 +25,27 @@ export const API_CHAT = `${API_BASE_URL}/chat`;
  * Check backend health, vector store chunk count, and Gemini API key status.
  */
 export async function checkSystemHealth() {
-  // Check detailed /health when authenticated so total_indexed_chunks and Gemini key
-  // status stay populated, falling back to public /health/live if unauthenticated
-  // or if an expiring session returns 401/403.
-  const headers = await authHeaders();
-  if (headers.Authorization) {
-    const authedRes = await fetch(`${API_BASE_URL}/health`, { headers });
-    if (authedRes.ok) {
-      return authedRes.json();
+  // Check /health (or fallback to /health/live) to determine system status
+  try {
+    const headers = await authHeaders();
+    const res = await fetch(`${API_BASE_URL}/health`, { headers });
+    if (res.ok) {
+      return await res.json();
     }
+  } catch {
+    // If authed /health fails, try public /health/live below
   }
 
-  const response = await fetch(`${API_BASE_URL}/health/live`);
-  if (!response.ok) {
-    throw new Error(`Health check returned status ${response.status}`);
+  try {
+    const response = await fetch(`${API_BASE_URL}/health/live`);
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch {
+    // Both failed
   }
-  return response.json();
+
+  throw new Error('Backend health check failed');
 }
 
 /**

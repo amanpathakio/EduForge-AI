@@ -55,7 +55,7 @@ def liveness_check():
     return LivenessResponse(status="healthy")
 
 @router.get("/health", response_model=HealthResponse)
-def health_check(_user=Depends(get_current_user)):
+def health_check():
     """
     Check API health and status of vector store and Gemini configuration.
     """
