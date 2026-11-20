@@ -533,3 +533,80 @@ export function getSlideAudioStreamUrl(lectureId, slideId, voiceId = null) {
   const qs = params.toString();
   return `${API_BASE_URL}/lectures/${lectureId}/slides/${slideId}/audio${qs ? `?${qs}` : ''}`;
 }
+
+// ==================== SUPER ADMIN SERVICES ====================
+
+export async function getAdminStats() {
+  const res = await apiFetch('/admin/stats');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to load administrative analytics');
+  }
+  return res.json();
+}
+
+export async function getAdminUsers() {
+  const res = await apiFetch('/admin/users');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to load user accounts');
+  }
+  return res.json();
+}
+
+export async function updateUserRole(userId, role) {
+  const res = await apiFetch(`/admin/users/${userId}/role`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to update user role');
+  }
+  return res.json();
+}
+
+export async function deleteUserAccount(userId) {
+  const res = await apiFetch(`/admin/users/${userId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to delete user account');
+  }
+  return res.json();
+}
+
+export async function getFacultyKeys() {
+  const res = await apiFetch('/admin/faculty-keys');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to load faculty keys');
+  }
+  return res.json();
+}
+
+export async function addFacultyKey(code) {
+  const res = await apiFetch('/admin/faculty-keys', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to add faculty key');
+  }
+  return res.json();
+}
+
+export async function promoteSelfToAdmin() {
+  const res = await apiFetch('/admin/promote-me', {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to promote account to administrator');
+  }
+  return res.json();
+}

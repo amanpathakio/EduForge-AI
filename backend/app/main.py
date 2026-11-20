@@ -17,6 +17,7 @@ from app.api.courses import router as courses_router
 from app.api.lectures import router as lectures_router
 from app.api.quizzes import router as quizzes_router
 from app.api.voices import router as voices_router
+from app.api.admin import router as admin_router
 
 # Configure structured logging
 logging.basicConfig(
@@ -62,6 +63,7 @@ app.include_router(courses_router)
 app.include_router(lectures_router)
 app.include_router(quizzes_router)
 app.include_router(voices_router)
+app.include_router(admin_router)
 
 # Locate and mount frontend files. Prefer React production build in `frontend/dist` when available,
 # otherwise fallback to legacy `backend/frontend`.

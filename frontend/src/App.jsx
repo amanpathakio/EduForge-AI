@@ -13,6 +13,7 @@ import LectureStudioView from './pages/LectureStudioView';
 import DocumentsView from './pages/DocumentsView';
 import StudentTutor from './pages/StudentTutor';
 import StudentLearningView from './pages/StudentLearningView';
+import AdminPanelView from './pages/AdminPanelView';
 
 import { checkSystemHealth, getCourses, createCourse, deleteCourse, joinCourseByInviteCode } from './services/api';
 import AuthScreen from './components/AuthScreen';
@@ -102,7 +103,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'courses' | 'course-workspace' | 'ask-ai' | 'student-learning' | 'studio' | 'documents'
   useEffect(() => {
     if (!currentUser) return;
-    if (!isEducator && ['dashboard', 'studio', 'documents'].includes(currentView)) {
+    if (!isEducator && ['dashboard', 'studio', 'documents', 'admin-panel'].includes(currentView)) {
       setCurrentView('student-learning');
     }
   }, [currentUser, isEducator, currentView]);
@@ -420,6 +421,18 @@ export default function App() {
                 onDocumentsUpdated={() => {
                   fetchHealth();
                   fetchCourses();
+                }}
+              />
+            )}
+
+            {/* 8. SUPER ADMIN PANEL */}
+            {currentView === 'admin-panel' && isEducator && (
+              <AdminPanelView
+                currentUser={currentUser}
+                onRoleUpdated={(newRole) => {
+                  if (session?.user) {
+                    setSession({ ...session, user: { ...session.user, role: newRole } });
+                  }
                 }}
               />
             )}

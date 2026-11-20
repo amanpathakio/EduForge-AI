@@ -11,6 +11,7 @@ export default defineConfig({
       '/auth': 'http://127.0.0.1:8010',
       '/health': 'http://127.0.0.1:8010',
       '/status': 'http://127.0.0.1:8010',
+      '/admin': 'http://127.0.0.1:8010',
       '/documents': 'http://127.0.0.1:8010',
       '/chat': 'http://127.0.0.1:8010',
       '/courses': 'http://127.0.0.1:8010',
