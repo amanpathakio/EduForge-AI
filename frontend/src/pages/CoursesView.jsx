@@ -77,8 +77,8 @@ export default function CoursesView({
           <h1 className="view-title">{isEducator ? 'Courses' : 'My Courses'}</h1>
           <p className="view-subtitle">
             {isEducator
-              ? 'Manage your academic courses, uploaded materials, invite codes, and published lectures.'
-              : 'Access your enrolled courses, published lectures, practice quizzes, and cited tutor.'}
+              ? 'Materials, student invites, and lectures.'
+              : 'Enrolled courses, decks, and practice.'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
@@ -113,29 +113,32 @@ export default function CoursesView({
           <p>Loading your courses...</p>
         </div>
       ) : courses.length === 0 ? (
-        <div className="empty-courses-state glass-card">
-          <div className="empty-icon">🎓</div>
-          <h3>{isEducator ? 'No Courses Found' : 'No Enrolled Courses Yet'}</h3>
-          <p>
+        <div className="empty-courses-state glass-card clean-empty">
+          <div className="empty-svg-badge" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+              <path d="M6 12v5c3 3 9 3 12 0v-5" />
+            </svg>
+          </div>
+          <h3>{isEducator ? 'No courses yet' : 'No enrolled courses'}</h3>
+          <p className="clean-empty-sub">
             {isEducator
-              ? 'Create your first course to upload lecture PDFs, invite students, and publish lectures.'
-              : 'Enter the invite code shared by your professor (e.g. EF-XXXXXX) to unlock course materials, lectures, and practice quizzes.'}
+              ? 'Create your first workspace.'
+              : 'Join with an EF-XXXXXX invite code.'}
           </p>
           {isEducator ? (
             <button
               className="button button-primary"
               onClick={() => setIsModalOpen(true)}
-              style={{ marginTop: '1rem' }}
             >
-              Create Course Now
+              Create Course
             </button>
           ) : (
             <button
               className="button button-primary"
               onClick={() => setIsJoinModalOpen(true)}
-              style={{ marginTop: '1rem' }}
             >
-              Join Course with Code
+              Join with Code
             </button>
           )}
         </div>
@@ -173,17 +176,25 @@ export default function CoursesView({
                 <div className="course-card-footer">
                   <div className="course-stats-meta">
                     <span className="meta-pill">
-                      📄 {course.document_count || 0} doc{(course.document_count === 1) ? '' : 's'}
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 2v6h6" />
+                      </svg>
+                      {course.document_count || 0} PDFs
                     </span>
                     <span className="meta-pill">
-                      🎙️ {course.lecture_count || 0} lecture{(course.lecture_count === 1) ? '' : 's'}
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 01-14 0v-2" />
+                      </svg>
+                      {course.lecture_count || 0} decks
                     </span>
                   </div>
                   <button
                     className="button button-secondary open-course-btn"
                     onClick={() => onOpenCourse(course)}
                   >
-                    {canManage ? 'Open Workspace →' : 'Enter Course →'}
+                    {canManage ? 'Workspace →' : 'Open →'}
                   </button>
                 </div>
               </div>

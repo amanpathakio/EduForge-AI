@@ -3,163 +3,174 @@ import BrandMark from './BrandMark';
 import ThemeToggle from './ThemeToggle';
 import NeuralBackdrop from './NeuralBackdrop';
 
-const LANDING_WAVE_BARS = [30, 62, 44, 88, 52, 94, 46, 76, 84, 58, 92, 48, 70, 82, 40];
+// Clean, bespoke monochrome SVG icons (Zero consumer emojis)
+function FileTextIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10 9 9 9 8 9" />
+    </svg>
+  );
+}
 
-const PREVIEW_CHUNKS = [
+function SlidesIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+      <line x1="8" y1="21" x2="16" y2="21" />
+      <line x1="12" y1="17" x2="12" y2="21" />
+    </svg>
+  );
+}
+
+function ShieldCheckIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <polyline points="9 12 11 14 15 10" />
+    </svg>
+  );
+}
+
+function LayersIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polygon points="12 2 2 7 12 12 22 7 12 2" />
+      <polyline points="2 17 12 22 22 17" />
+      <polyline points="2 12 12 17 22 12" />
+    </svg>
+  );
+}
+
+function ArrowRightIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <polyline points="12 5 19 12 12 19" />
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <polygon points="5 3 19 12 5 21 5 3" />
+    </svg>
+  );
+}
+
+function PauseIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="6" y="4" width="4" height="16" />
+      <rect x="14" y="4" width="4" height="16" />
+    </svg>
+  );
+}
+
+const PREVIEW_CITATIONS = [
   {
-    id: 'chunk-p14',
-    source: 'CS301_Operating_Systems_Principles.pdf · Page 14',
-    shortLabel: 'OS_Principles.pdf · p.14',
-    distance: 0.1842,
-    similarityPct: 82,
-    excerpt:
-      '"Round Robin (RR) assigns a fixed time quantum q (typically 10–100 ms) to each ready process in a circular FIFO queue. Because every runnable process receives CPU time within (n - 1) × q units, indefinite blocking of low-priority jobs cannot occur."',
+    id: 'p14',
+    label: 'Page 14 · §3.2',
+    doc: 'CS301_OS_Principles.pdf',
+    page: 14,
+    distance: '0.142',
+    match: '98.6%',
+    quote:
+      'Round Robin assigns a fixed time quantum q to each ready process in a circular FIFO queue, preventing thread starvation by preempting long-running tasks.',
   },
   {
-    id: 'chunk-p15',
-    source: 'CS301_Operating_Systems_Principles.pdf · Page 15',
-    shortLabel: 'OS_Principles.pdf · p.15',
-    distance: 0.2194,
-    similarityPct: 78,
-    excerpt:
-      '"Selecting q requires balancing responsiveness against overhead: if q is very large, RR degenerates into FCFS; if q is too small, frequent context switches consume significant CPU cycles without useful progress."',
+    id: 'p15',
+    label: 'Page 15 · §3.4',
+    doc: 'CS301_OS_Principles.pdf',
+    page: 15,
+    distance: '0.185',
+    match: '97.2%',
+    quote:
+      'If quantum q is too large, Round Robin degrades into FCFS; if too small, excessive context-switch overhead degrades total CPU efficiency.',
   },
+];
+
+const WAVE_BARS = [
+  28, 56, 40, 82, 64, 94, 48, 72, 88, 54, 96, 62,
+  44, 78, 90, 52, 68, 86, 42, 74, 58, 80, 46, 34,
 ];
 
 const PREVIEW_SLIDES = [
   {
-    num: '01',
+    number: '01',
     title: 'CPU Scheduling Objectives',
+    sourceRef: 'Chapter 3 · Page 11',
+    quotePreview: 'Round Robin assigns a fixed time quantum q to each ready process in a circular queue, preventing starvation.',
     bullets: [
-      'Maximize CPU utilization and throughput across ready queues.',
-      'Minimize turnaround time, waiting time, and interactive response latency.',
-      'Enforce starvation-free fairness for background and interactive threads.',
+      'Maximize CPU utilization across active and background queues.',
+      'Minimize turnaround latency for batch workloads.',
+      'Enforce fair CPU share allocation to prevent thread starvation.',
     ],
-    page: 'Page 11',
+    speakerNotes:
+      'Begin by contrasting batch workloads with interactive desktop systems. Ask students why optimizing for turnaround time can inadvertently hurt interactive response time.',
   },
   {
-    num: '02',
-    title: 'Circular Ready Queue Mechanics',
+    number: '02',
+    title: 'The Circular Ready Queue & Time Quantum',
+    sourceRef: 'Chapter 3 · Page 13',
+    quotePreview: 'Context switch cost sets the practical lower bound for quantum duration without degrading total CPU efficiency.',
     bullets: [
-      'Scheduler pops head process for at most one time quantum q.',
-      'Timer interrupt preempts running thread if burst exceeds q.',
-      'Remaining CPU burst rejoins the tail of the FIFO ready queue.',
+      'Dispatch head process for at most one bounded time quantum q.',
+      'Preempt immediately on hardware timer interrupt and requeue at tail.',
+      'Context switch cost sets the practical lower bound for quantum duration.',
     ],
-    page: 'Page 13',
-  },
-  {
-    num: '03',
-    title: 'Selecting an Optimal Time Quantum',
-    bullets: [
-      'Too large (q → ∞): scheduling degrades toward First-Come, First-Served behavior.',
-      'Too small (q < 10 ms): excessive context switching lowers CPU utilization.',
-      'Target heuristic: keep 80% of CPU bursts shorter than one time quantum.',
-    ],
-    page: 'Page 15',
+    speakerNotes:
+      'Highlight how timer interrupts enforce preemption without cooperation from the running process. Point out that Linux default quantums typically range from 10ms to 100ms.',
   },
 ];
 
-const PIPELINE_STEPS = [
+const SAMPLE_QUESTIONS = [
   {
-    num: '01',
-    tech: 'STAGE 01 · INGESTION',
-    title: 'Page-Preserving PDF Ingest',
-    desc: 'Extracts uploaded syllabi and lecture notes page by page, tagging every fragment with filename, document ID, and exact page number.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-        <path d="M14 2H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V7l-5-5z" strokeWidth="1.8" strokeLinejoin="round" />
-        <path d="M14 2v5h5M9 13h6M9 17h4" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    ),
+    prompt: 'How does Round Robin scheduling prevent thread starvation?',
+    response:
+      'Round Robin enforces a bounded time quantum q per dispatch cycle in a circular FIFO queue. Once a thread exceeds its allocated quantum, a hardware timer interrupt preempts it and returns it to the queue tail, guaranteeing that every runnable process receives deterministic CPU time.',
+    citations: ['CS301_OS_Principles.pdf · Page 14', 'CS301_OS_Principles.pdf · Page 15'],
+    latency: '142ms',
   },
   {
-    num: '02',
-    tech: 'STAGE 02 · SEMANTIC INDEX',
-    title: 'Contextual Knowledge Indexing',
-    desc: 'Segments course readings with overlap windows and indexes semantic representations tuned for academic terminology and formulas.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-        <rect x="7" y="7" width="10" height="10" rx="2" strokeWidth="1.8" />
-        <path d="M9 2v3m6-3v3M9 19v3m6-3v3M2 9h3m-3 6h3M19 9h3m-3 6h3" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    ),
+    prompt: 'What occurs during a Virtual Memory page fault exception?',
+    response:
+      'The Memory Management Unit (MMU) encounters an invalid page table descriptor and raises a page fault trap to the kernel. The operating system pauses the thread, identifies an available physical frame, retrieves the requested page from secondary storage, updates the page table mapping, and restarts the instruction.',
+    citations: ['CS301_OS_Principles.pdf · Page 48', 'CS301_OS_Principles.pdf · Page 50'],
+    latency: '186ms',
   },
   {
-    num: '03',
-    tech: 'STAGE 03 · COURSE VAULT',
-    title: 'Course-Scoped Retrieval',
-    desc: 'Queries persistent per-course knowledge vaults with strict relevance margin filtering so sibling courses never bleed across answers.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-        <ellipse cx="12" cy="6" rx="7" ry="3" strokeWidth="1.8" />
-        <path d="M5 6v6c0 1.66 3.13 3 7 3s7-1.34 7-3V6" strokeWidth="1.8" />
-        <path d="M5 12v6c0 1.66 3.13 3 7 3s7-1.34 7-3v-6" strokeWidth="1.8" />
-      </svg>
-    ),
-  },
-  {
-    num: '04',
-    tech: 'STAGE 04 · VERIFIED SYNTHESIS',
-    title: 'Cite Evidence or Decline',
-    desc: 'Synthesizes narrated lectures, answers, and quizzes strictly from retrieved passages—attaching page citations or refusing unsupported queries.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-        <path d="M12 3l7 3v5c0 4.5-3 8.4-7 10-4-1.6-7-5.5-7-10V6l7-3z" strokeWidth="1.8" strokeLinejoin="round" />
-        <path d="M9.5 12.2l1.8 1.8 3.6-3.8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-];
-
-const SAFEGUARDS = [
-  {
-    tag: 'PROMPT GUARDRAIL',
-    title: 'Strict Context-Only Grounding',
-    body: 'Synthesis guardrails prevent inventing external facts. When uploaded course material lacks evidence, EduForge declines cleanly.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-        <rect x="5" y="11" width="14" height="9" rx="2" strokeWidth="1.8" />
-        <path d="M8 11V7a4 4 0 018 0v4" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    tag: 'RELEVANCE THRESHOLD',
-    title: 'Pre-Generation Confidence Gate',
-    body: 'Queries that fall below the similarity threshold inside the course vault stop cleanly at retrieval before response synthesis runs.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-        <path d="M4 17l5-5 4 3 7-8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M3 20h18" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    tag: 'CHUNK AUDITOR',
-    title: 'Inspectable Page Provenance',
-    body: 'Every tutor reply and lecture slide links to clickable citation badges revealing the exact extracted excerpt and similarity score.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-        <circle cx="11" cy="11" r="6" strokeWidth="1.8" />
-        <path d="M16 16l4.5 4.5" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    ),
+    prompt: 'What are the four necessary Coffman conditions for system deadlock?',
+    response:
+      'System deadlock requires the simultaneous presence of: 1) Mutual Exclusion, 2) Hold and Wait, 3) No Preemption, and 4) Circular Wait. Eliminating any one of these four conditions guarantees that deadlock cannot form.',
+    citations: ['CS301_OS_Principles.pdf · Page 72'],
+    latency: '115ms',
   },
 ];
 
 export default function LandingPage({ theme, onToggleTheme, onOpenAuth }) {
-  const [activePreviewTab, setActivePreviewTab] = useState('tutor');
-  const [tutorScenario, setTutorScenario] = useState('grounded');
-  const [selectedChunkIdx, setSelectedChunkIdx] = useState(0);
-  const [activeSlideIdx, setActiveSlideIdx] = useState(2);
-  const [previewQuizPublished, setPreviewQuizPublished] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('studio');
+  const [activeCitationIdx, setActiveCitationIdx] = useState(0);
+  const [activeSlideIdx, setActiveSlideIdx] = useState(0);
+  const [showNotes, setShowNotes] = useState(true);
+  const [isPlayingVoice, setIsPlayingVoice] = useState(false);
 
-  const selectedChunk = PREVIEW_CHUNKS[selectedChunkIdx];
+  // Typewriter streaming effect in the interactive sandbox
+  const [activeQuestionIdx, setActiveQuestionIdx] = useState(0);
+  const [displayedResponse, setDisplayedResponse] = useState(SAMPLE_QUESTIONS[0].response);
+  const [isTyping, setIsTyping] = useState(false);
+
+  const selectedCitation = PREVIEW_CITATIONS[activeCitationIdx];
   const selectedSlide = PREVIEW_SLIDES[activeSlideIdx];
+  const selectedQuestion = SAMPLE_QUESTIONS[activeQuestionIdx];
 
+  // Progressive scroll-driven reveal
   useEffect(() => {
-    const els = document.querySelectorAll('.reveal-section');
+    const els = document.querySelectorAll('.editorial-reveal');
     if (!els.length || typeof IntersectionObserver === 'undefined') {
       els.forEach((el) => el.classList.add('is-visible'));
       return undefined;
@@ -173,42 +184,56 @@ export default function LandingPage({ theme, onToggleTheme, onOpenAuth }) {
           }
         });
       },
-      { threshold: 0.12 }
+      { threshold: 0.08 }
     );
     els.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
   }, []);
 
+  // Spatial mouse lighting coordinates
   const handlePointerMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
     e.currentTarget.style.setProperty('--mx', `${e.clientX - rect.left}px`);
     e.currentTarget.style.setProperty('--my', `${e.clientY - rect.top}px`);
   };
 
-  const scrollToSection = (id) => {
-    setMobileMenuOpen(false);
+  // Smooth typing stream when switching questions in sandbox
+  const handleSelectQuestion = (idx) => {
+    if (idx === activeQuestionIdx && !isTyping) return;
+    setActiveQuestionIdx(idx);
+    setIsTyping(true);
+    const targetText = SAMPLE_QUESTIONS[idx].response;
+    setDisplayedResponse('');
+
+    let charIdx = 0;
+    const step = Math.max(1, Math.floor(targetText.length / 32));
+    const timer = setInterval(() => {
+      charIdx += step;
+      if (charIdx >= targetText.length) {
+        setDisplayedResponse(targetText);
+        setIsTyping(false);
+        clearInterval(timer);
+      } else {
+        setDisplayedResponse(targetText.slice(0, charIdx));
+      }
+    }, 20);
+  };
+
+  const scrollTo = (id) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
-    <div className="landing-page" onPointerMove={handlePointerMove}>
+    <div className="editorial-landing" onPointerMove={handlePointerMove}>
       <NeuralBackdrop theme={theme} />
-      {/* Spatial Architectural Backdrop */}
-      <div className="landing-ambient" aria-hidden="true">
-        <div className="landing-grid-bg" />
-        <div className="auth-spotlight" />
-        <div className="landing-horizon-beam" />
-        <div className="landing-glow landing-glow-primary" />
-        <div className="landing-glow landing-glow-teal" />
-      </div>
 
-      {/* Floating Navigation */}
-      <header className="landing-nav-wrap">
-        <nav className="landing-nav" aria-label="Primary navigation">
+      {/* Clean, Architectural Navigation */}
+      <header className="editorial-nav-wrap">
+        <nav className="editorial-nav" aria-label="Main Navigation">
           <a
             href="#top"
-            className="landing-brand-link"
+            className="editorial-brand"
             onClick={(e) => {
               e.preventDefault();
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -217,578 +242,493 @@ export default function LandingPage({ theme, onToggleTheme, onOpenAuth }) {
             <BrandMark size="sm" />
           </a>
 
-          <div className="landing-nav-links">
-            <button type="button" onClick={() => scrollToSection('pipeline')}>
-              RAG Pipeline
+          <div className="editorial-nav-links">
+            <button type="button" onClick={() => scrollTo('architecture')}>
+              Architecture
             </button>
-            <button type="button" onClick={() => scrollToSection('workspaces')}>
+            <button type="button" onClick={() => scrollTo('sandbox')}>
+              Interactive Audit
+            </button>
+            <button type="button" onClick={() => scrollTo('workspaces')}>
               Workspaces
-            </button>
-            <button type="button" onClick={() => scrollToSection('safeguards')}>
-              Grounding
             </button>
           </div>
 
-          <div className="landing-nav-actions">
+          <div className="editorial-nav-actions">
             <ThemeToggle theme={theme} onToggle={onToggleTheme} compact />
             <button
               type="button"
-              className="button button-secondary landing-btn-signin"
+              className="editorial-btn-text"
               onClick={() => onOpenAuth('login')}
             >
               Sign In
             </button>
             <button
               type="button"
-              className="button button-primary landing-btn-cta"
+              className="editorial-btn-solid"
               onClick={() => onOpenAuth('signup')}
             >
-              Get Started <span className="btn-arrow">→</span>
+              <span>Get Started</span>
+              <ArrowRightIcon />
             </button>
           </div>
-
-          <button
-            type="button"
-            className="landing-mobile-trigger"
-            aria-expanded={mobileMenuOpen}
-            aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-            onClick={() => setMobileMenuOpen((v) => !v)}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-              {mobileMenuOpen ? (
-                <path strokeWidth="2" strokeLinecap="round" d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeWidth="2" strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
-              )}
-            </svg>
-          </button>
         </nav>
-
-        {mobileMenuOpen && (
-          <div className="landing-mobile-drawer">
-            <button type="button" onClick={() => scrollToSection('pipeline')}>
-              RAG Pipeline
-            </button>
-            <button type="button" onClick={() => scrollToSection('workspaces')}>
-              Workspaces
-            </button>
-            <button type="button" onClick={() => scrollToSection('safeguards')}>
-              Grounding Safeguards
-            </button>
-            <div className="landing-mobile-controls">
-              <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-              <button
-                type="button"
-                className="button button-secondary"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenAuth('login');
-                }}
-              >
-                Sign In
-              </button>
-            </div>
-            <button
-              type="button"
-              className="button button-primary"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                onOpenAuth('signup');
-              }}
-            >
-              Create Account →
-            </button>
-          </div>
-        )}
       </header>
 
-      <main id="top" className="landing-main">
-        {/* HERO SECTION */}
-        <section className="landing-hero">
-          <div className="hero-copy-col">
-            <div className="hero-kicker">
-              <span className="kicker-pulse" aria-hidden="true" />
-              <span>COURSE-GROUNDED ACADEMIC INTELLIGENCE</span>
+      <main className="editorial-main">
+        {/* HERO SECTION — Quiet, Confident, Human-Crafted */}
+        <section className="editorial-hero">
+          <div className="hero-content">
+            <div className="hero-eyebrow">
+              <span className="eyebrow-rule" />
+              <span>ACADEMIC WORKSPACE &amp; LECTURE STUDIO</span>
             </div>
 
-            <h1 className="hero-headline">
-              Course intelligence,{' '}
-              <em className="hero-serif-accent">strictly anchored</em> to your syllabus.
+            <h1 className="hero-title">
+              Turn course literature into{' '}
+              <em className="hero-title-italic">verified lectures &amp; study tools.</em>
             </h1>
 
-            <p className="hero-lead">
-              EduForge AI turns professor-uploaded lecture PDFs into course-isolated
-              knowledge vaults—synthesizing voice-narrated lecture studios, cited student Q&amp;A,
-              and source-verified assessments where every claim traces back to a page number.
+            <p className="hero-description">
+              EduForge AI binds language models strictly to your uploaded syllabi, textbooks, and
+              lecture notes. Professors author slide decks with presenter notes; students study
+              with mathematically verifiable citations.
             </p>
 
-            <div className="hero-cta-row">
+            <div className="hero-actions">
               <button
                 type="button"
-                className="button button-primary hero-cta-primary"
+                className="editorial-btn-solid large"
                 onClick={() => onOpenAuth('signup')}
               >
-                <span>Create Academic Account</span>
-                <span className="btn-arrow" aria-hidden="true">→</span>
+                <span>Launch Educator Studio</span>
+                <ArrowRightIcon />
               </button>
               <button
                 type="button"
-                className="button button-secondary hero-cta-secondary"
+                className="editorial-btn-outline large"
                 onClick={() => onOpenAuth('login')}
               >
-                Sign In to Workspace
+                <span>Student Portal</span>
               </button>
             </div>
 
-            <div className="hero-stack-strip" aria-label="Core platform capabilities">
-              <div className="stack-chip">
-                <span className="stack-dot indigo" aria-hidden="true" />
-                <div>
-                  <b>Page-Exact Ingest</b>
-                  <small>Syllabus &amp; PDF indexing</small>
-                </div>
+            <div className="hero-trust-list">
+              <div className="trust-item">
+                <ShieldCheckIcon />
+                <span>Page-level citations</span>
               </div>
-              <div className="stack-chip">
-                <span className="stack-dot violet" aria-hidden="true" />
-                <div>
-                  <b>Voice Lecture Studio</b>
-                  <small>Educator narration synthesis</small>
-                </div>
+              <div className="trust-item">
+                <LayersIcon />
+                <span>Isolated course vector stores</span>
               </div>
-              <div className="stack-chip">
-                <span className="stack-dot teal" aria-hidden="true" />
-                <div>
-                  <b>Course-Isolated Vault</b>
-                  <small>Zero cross-course leakage</small>
-                </div>
-              </div>
-              <div className="stack-chip">
-                <span className="stack-dot cyan" aria-hidden="true" />
-                <div>
-                  <b>Role-Enforced Auth</b>
-                  <small>Professor &amp; student separation</small>
-                </div>
+              <div className="trust-item">
+                <FileTextIcon />
+                <span>Zero hallucination fallback</span>
               </div>
             </div>
           </div>
 
-          {/* INTERACTIVE LIVE WORKBENCH PREVIEW */}
-          <div className="hero-workbench-col">
-            <div className="workbench-aurora-wrap">
-              <div className="workbench-frame">
-                <div className="workbench-chrome">
-                  <div className="workbench-dots" aria-hidden="true">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                  <span className="workbench-path">CS301 · Operating Systems Principles</span>
-                  <span className="workbench-badge">
-                    <i aria-hidden="true" />
-                    LIVE WORKSPACE
-                  </span>
+          {/* AUTHENTIC DESKTOP WORKSPACE VIEWPORT WITH TACTILE SPRING MOTION */}
+          <div className="editorial-window-container">
+            <div className="editorial-window spatial-glow">
+              {/* Window Titlebar */}
+              <div className="window-titlebar">
+                <div className="window-controls">
+                  <span className="window-dot red" />
+                  <span className="window-dot yellow" />
+                  <span className="window-dot green" />
                 </div>
+                <div className="window-breadcrumb">
+                  <span>Courses</span>
+                  <span className="sep">/</span>
+                  <span className="active-path">CS301 Operating Systems Principles</span>
+                </div>
+                <div className="window-status">
+                  <span className="status-indicator-dot" />
+                  <span>ChromaDB Synced</span>
+                </div>
+              </div>
 
-                <div className="workbench-tabs" role="tablist" aria-label="Platform capabilities preview">
+              {/* Segmented Workspace Mode Switcher with Fluid Spring Slider */}
+              <div className="window-toolbar">
+                <div className="segmented-control" role="tablist">
+                  <div
+                    className={`segmented-slider ${activeTab === 'studio' ? 'is-studio' : 'is-tutor'}`}
+                    aria-hidden="true"
+                  />
                   <button
                     type="button"
                     role="tab"
-                    aria-selected={activePreviewTab === 'tutor'}
-                    className={activePreviewTab === 'tutor' ? 'active' : ''}
-                    onClick={() => setActivePreviewTab('tutor')}
+                    aria-selected={activeTab === 'studio'}
+                    className={`segment-btn ${activeTab === 'studio' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('studio')}
                   >
-                    Ask Course Tutor
+                    <SlidesIcon />
+                    <span>AI Lecture Studio</span>
                   </button>
                   <button
                     type="button"
                     role="tab"
-                    aria-selected={activePreviewTab === 'studio'}
-                    className={activePreviewTab === 'studio' ? 'active' : ''}
-                    onClick={() => setActivePreviewTab('studio')}
+                    aria-selected={activeTab === 'tutor'}
+                    className={`segment-btn ${activeTab === 'tutor' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('tutor')}
                   >
-                    Lecture Studio
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activePreviewTab === 'quiz'}
-                    className={activePreviewTab === 'quiz' ? 'active' : ''}
-                    onClick={() => setActivePreviewTab('quiz')}
-                  >
-                    Architect &amp; Quiz
+                    <FileTextIcon />
+                    <span>Course Tutor &amp; Citations</span>
                   </button>
                 </div>
+              </div>
 
-                {activePreviewTab === 'tutor' && (
-                  <div className="workbench-body">
-                    <div className="wb-scenario-bar" role="group" aria-label="Test retrieval scenario">
-                      <span>Try query:</span>
-                      <button
-                        type="button"
-                        className={tutorScenario === 'grounded' ? 'active' : ''}
-                        onClick={() => setTutorScenario('grounded')}
-                      >
-                        In-Syllabus (Cited)
-                      </button>
-                      <button
-                        type="button"
-                        className={tutorScenario === 'declined' ? 'active' : ''}
-                        onClick={() => setTutorScenario('declined')}
-                      >
-                        Off-Topic (Guardrail)
-                      </button>
-                    </div>
-
-                    {tutorScenario === 'grounded' ? (
-                      <>
-                        <div className="wb-user-msg">
-                          How does Round Robin prevent starvation compared to strict priority queues?
-                        </div>
-
-                        <div className="wb-ai-msg">
-                          <p>
-                            Round Robin enforces a bounded <strong>time quantum (q)</strong> per
-                            ready process in a circular FIFO queue, guaranteeing every runnable
-                            process receives CPU cycles within <code>(n - 1) × q</code> time units.
-                          </p>
-                          <div className="wb-citations-row">
-                            <span className="wb-cit-label">Click a citation to inspect source chunk:</span>
-                            <div className="wb-cit-pills">
-                              {PREVIEW_CHUNKS.map((chunk, idx) => (
-                                <button
-                                  key={chunk.id}
-                                  type="button"
-                                  className={`wb-cit-pill ${selectedChunkIdx === idx ? 'selected' : ''}`}
-                                  onClick={() => setSelectedChunkIdx(idx)}
-                                >
-                                  {chunk.shortLabel}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="wb-auditor-box">
-                          <div className="wb-auditor-head">
-                            <span>SOURCE CHUNK AUDITOR · {selectedChunk.source}</span>
-                            <code>distance: {selectedChunk.distance.toFixed(4)}</code>
-                          </div>
-                          <div className="wb-auditor-meter" aria-hidden="true">
-                            <div style={{ width: `${selectedChunk.similarityPct}%` }} />
-                          </div>
-                          <blockquote>{selectedChunk.excerpt}</blockquote>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="wb-user-msg">
-                          Predict Apple&apos;s Q4 stock valuation for CS301 exam prep.
-                        </div>
-
-                        <div className="wb-ai-msg wb-guardrail-msg">
-                          <div className="wb-guardrail-tag">CONFIDENCE GATE TRIGGERED · GENERATION HALTED</div>
-                          <p>
-                            The uploaded CS301 course material does not contain information about
-                            equity valuations or financial forecasts. Ask a question covered in your
-                            course PDFs.
-                          </p>
-                        </div>
-
-                        <div className="wb-auditor-box wb-auditor-declined">
-                          <div className="wb-auditor-head">
-                            <span>RELEVANCE GATE · MAX DISTANCE EXCEEDED</span>
-                            <code>distance: 0.8124</code>
-                          </div>
-                          <div className="wb-auditor-meter declined" aria-hidden="true">
-                            <div style={{ width: '19%' }} />
-                          </div>
-                          <blockquote>
-                            No passages inside the CS301 course vault passed the minimum
-                            semantic similarity cutoff, so synthesis was blocked cleanly.
-                          </blockquote>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {activePreviewTab === 'studio' && (
-                  <div className="workbench-body">
-                    <div className="wb-slide-card">
-                      <div className="wb-slide-top">
-                        <span>LECTURE STUDIO · DECK 04</span>
-                        <span>SLIDE {selectedSlide.num} / 03</span>
-                      </div>
-                      <h3>{selectedSlide.title}</h3>
-                      <ul>
-                        {selectedSlide.bullets.map((bullet, i) => (
-                          <li key={i}>{bullet}</li>
-                        ))}
-                      </ul>
-                      <div className="wb-slide-foot">
-                        <span className="wb-coverage-pill">Evidence Coverage Verified</span>
-                        <span>Grounded in {selectedSlide.page}</span>
-                      </div>
-                    </div>
-
-                    <div className="wb-slide-rail" role="tablist" aria-label="Preview slides">
+              {/* Window Body: Mode-Dependent Presentation */}
+              {activeTab === 'studio' ? (
+                <div className="window-body studio-mode">
+                  {/* Slide Outline Rail & Actions */}
+                  <div className="studio-subbar">
+                    <div className="slide-pills-row" role="tablist">
                       {PREVIEW_SLIDES.map((slide, idx) => (
                         <button
-                          key={slide.num}
+                          key={slide.number}
                           type="button"
                           role="tab"
                           aria-selected={activeSlideIdx === idx}
-                          className={`wb-slide-thumb ${activeSlideIdx === idx ? 'active' : ''}`}
+                          className={`slide-pill ${activeSlideIdx === idx ? 'active' : ''}`}
                           onClick={() => setActiveSlideIdx(idx)}
                         >
-                          <b>{slide.num}</b>
-                          <span>{slide.page}</span>
+                          <span className="slide-pill-num">{slide.number}</span>
+                          <span className="slide-pill-title">{slide.title}</span>
                         </button>
                       ))}
                     </div>
-
-                    <div className="wb-voice-mini">
-                      <span className="wb-voice-label">NARRATION WAVEFORM</span>
-                      <div className="voice-wave-bars compact" aria-hidden="true">
-                        {LANDING_WAVE_BARS.map((height, idx) => (
-                          <span
-                            key={idx}
-                            style={{
-                              '--bar-h': `${height}%`,
-                              '--bar-delay': `${(idx * 0.08).toFixed(2)}s`,
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="wb-regen-strip">
-                      <span>AI Slide Refine:</span>
-                      <em>&ldquo;Add a comparison table with SJF latency&rdquo;</em>
-                    </div>
+                    <button
+                      type="button"
+                      className="notes-toggle-link"
+                      onClick={() => setShowNotes((v) => !v)}
+                    >
+                      {showNotes ? 'Hide Speaker Notes' : 'Show Speaker Notes'}
+                    </button>
                   </div>
-                )}
 
-                {activePreviewTab === 'quiz' && (
-                  <div className="workbench-body">
-                    <div className="wb-architect-steps">
-                      <div className="wb-step done">
-                        <span>✓</span>
-                        <div>
-                          <b>Course Architect Blueprint</b>
-                          <small>4 modules mapped across pages 1–38</small>
-                        </div>
-                      </div>
-                      <div className="wb-step done">
-                        <span>✓</span>
-                        <div>
-                          <b>Assessment Draft Ready</b>
-                          <small>5 source-cited questions prepared for review</small>
-                        </div>
-                      </div>
+                  {/* Clean Animated Slide Presentation Canvas */}
+                  <div key={activeSlideIdx} className="slide-canvas slide-stage-in">
+                    <div className="slide-meta-row">
+                      <span className="slide-index-label">SLIDE {selectedSlide.number} OF 02</span>
+                      <span className="slide-source-label">Source: {selectedSlide.sourceRef}</span>
                     </div>
 
-                    <div className="wb-quiz-preview">
-                      <div className="wb-quiz-meta">
-                        <span>QUESTION 01 · SOURCE PAGE 14</span>
-                        <span className={`wb-status ${previewQuizPublished ? 'published' : 'draft'}`}>
-                          {previewQuizPublished ? 'PUBLISHED' : 'PROFESSOR REVIEW'}
-                        </span>
+                    <h2 className="slide-heading">{selectedSlide.title}</h2>
+
+                    <ul className="slide-bullet-list">
+                      {selectedSlide.bullets.map((bullet, i) => (
+                        <li key={i}>{bullet}</li>
+                      ))}
+                    </ul>
+
+                    {showNotes && (
+                      <div className="speaker-notes-drawer">
+                        <div className="speaker-notes-title">
+                          <span>Presenter Speaker Notes (Grounded in Syllabus):</span>
+                        </div>
+                        <p className="speaker-notes-text">{selectedSlide.speakerNotes}</p>
                       </div>
-                      <strong>
-                        What happens to Round Robin response time as the number of ready processes n increases?
-                      </strong>
-                      <div className="wb-quiz-footer">
-                        <small>Grounded explanation verified from textbook text</small>
+                    )}
+                  </div>
+
+                  {/* Flagship Neural Voice Synthesis Visualizer (Auth-grade Kinetic Waveform) */}
+                  <div className="landing-voice-card">
+                    <div className="landing-voice-top">
+                      <div className="voice-narrator-info">
                         <button
                           type="button"
-                          className="button button-primary button-xs"
-                          onClick={() => setPreviewQuizPublished((v) => !v)}
+                          className={`voice-play-trigger ${isPlayingVoice ? 'is-playing' : ''}`}
+                          onClick={() => setIsPlayingVoice((v) => !v)}
+                          aria-label={isPlayingVoice ? 'Pause audio lecture narration' : 'Play audio lecture narration'}
                         >
-                          {previewQuizPublished ? 'Published to Students ✓' : 'Approve & Publish'}
+                          {isPlayingVoice ? <PauseIcon /> : <PlayIcon />}
+                          <span>{isPlayingVoice ? 'Pause Narration' : 'Preview Professor Voice'}</span>
                         </button>
+                        <span className="narrator-spec">Prof. Brian · Neural Academic Synthesis</span>
+                      </div>
+                      <div className="voice-status-pill">
+                        <span className={`live-dot ${isPlayingVoice ? 'active' : ''}`} />
+                        <code>{isPlayingVoice ? 'ACTIVE STREAM' : 'SYNTHESIS READY'}</code>
                       </div>
                     </div>
+
+                    <div className={`voice-wave-bars compact ${isPlayingVoice ? 'active' : 'paused'}`} aria-hidden="true">
+                      {WAVE_BARS.map((height, idx) => (
+                        <span
+                          key={idx}
+                          style={{
+                            '--bar-h': isPlayingVoice ? `${height}%` : '22%',
+                            '--bar-delay': `${(idx * 0.06).toFixed(2)}s`,
+                            animationPlayState: isPlayingVoice ? 'running' : 'paused',
+                          }}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="voice-caption-bar">
+                      <span className="caption-tag">SLIDE {selectedSlide.number}</span>
+                      <p>&ldquo;{selectedSlide.quotePreview}&rdquo;</p>
+                    </div>
                   </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="window-body tutor-mode">
+                  <div className="tutor-chat-stream">
+                    <div className="chat-entry question">
+                      <span className="entry-role">Student Query</span>
+                      <p className="entry-text">
+                        How does Round Robin scheduling prevent thread starvation?
+                      </p>
+                    </div>
+
+                    <div className="chat-entry response">
+                      <span className="entry-role">Course Tutor</span>
+                      <p className="entry-text">
+                        Round Robin assigns a bounded <strong>time quantum (q)</strong> to each
+                        runnable process in a circular FIFO queue. Once the timer expires, the thread
+                        is preempted and returned to the queue tail, ensuring that every runnable task
+                        receives deterministic CPU time.
+                      </p>
+
+                      <div className="citations-tray">
+                        <span className="tray-label">Cited Documents:</span>
+                        <div className="tray-pills">
+                          {PREVIEW_CITATIONS.map((cit, idx) => (
+                            <button
+                              key={cit.id}
+                              type="button"
+                              className={`citation-token ${activeCitationIdx === idx ? 'active' : ''}`}
+                              onClick={() => setActiveCitationIdx(idx)}
+                            >
+                              <span>{cit.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Exact Vector Citation Inspector */}
+                    <div key={activeCitationIdx} className="citation-inspector-card citation-reveal">
+                      <div className="inspector-head">
+                        <div className="inspector-source">
+                          <FileTextIcon />
+                          <span>{selectedCitation.doc} · Page {selectedCitation.page}</span>
+                        </div>
+                        <div className="inspector-stats">
+                          <span className="stat-tag">Vector Distance: {selectedCitation.distance}</span>
+                          <span className="stat-tag match">Confidence: {selectedCitation.match}</span>
+                        </div>
+                      </div>
+                      <blockquote className="inspector-excerpt">
+                        "{selectedCitation.quote}"
+                      </blockquote>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>
 
-        {/* SECTION 1: 4-STAGE PIPELINE */}
-        <section id="pipeline" className="landing-section reveal-section">
+        {/* ARCHITECTURAL SPECIFICATION */}
+        <section id="architecture" className="editorial-section editorial-reveal">
           <div className="section-intro">
-            <span className="eyebrow">ARCHITECTURE FLOW</span>
-            <h2>From raw PDFs to audited academic outputs.</h2>
-            <p>
-              Every course maintains an isolated retrieval pipeline so cross-course material never bleeds across answers.
+            <span className="section-label">SYSTEM ARCHITECTURE</span>
+            <h2 className="section-heading">Engineered for Academic Integrity</h2>
+            <p className="section-subtext">
+              Generic chatbots guess. NotebookLM is locked into a personal consumer notebook.
+              EduForge AI is a structured, course-isolated teaching platform built on open foundations.
             </p>
           </div>
 
-          <div className="pipeline-grid">
-            <div className="pipeline-connector" aria-hidden="true">
-              <span className="pipeline-packet" />
-            </div>
-            {PIPELINE_STEPS.map((step) => (
-              <article key={step.num} className="pipeline-card">
-                <div className="pipeline-card-top">
-                  <div className="pipeline-icon-box">{step.icon}</div>
-                  <span className="pipeline-num">{step.num}</span>
-                </div>
-                <code className="pipeline-tech">{step.tech}</code>
-                <h3>{step.title}</h3>
-                <p>{step.desc}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        {/* SECTION 2: ROLE-SEPARATED BENTO WORKSPACES */}
-        <section id="workspaces" className="landing-section reveal-section">
-          <div className="section-intro">
-            <span className="eyebrow">ROLE-AWARE PLATFORM</span>
-            <h2>Built cleanly for both sides of the lecture hall.</h2>
-            <p>
-              Professor authoring tools and student study spaces share the same verified knowledge base with strict role boundaries.
-            </p>
-          </div>
-
-          <div className="workspaces-bento">
-            <article className="workspace-showcase professor">
-              <div className="ws-badge-row">
-                <span className="ws-role-pill">EDUCATOR COMMAND CENTER</span>
-                <span className="ws-tag">Course Architect + Lecture Studio</span>
-              </div>
-              <h3>Design courses, approve blueprints, and publish verified assessments.</h3>
-
-              <div className="bento-mini-preview">
-                <div className="bento-flow-node done">Course Blueprint · 4 Modules</div>
-                <i aria-hidden="true">→</i>
-                <div className="bento-flow-node active">Lecture Studio · Citations</div>
-                <i aria-hidden="true">→</i>
-                <div className="bento-flow-node gate">Draft Quiz Gate</div>
-              </div>
-
-              <ul className="ws-feature-list">
-                <li>
-                  <b>Evidence-First Course Architect</b>
-                  <span>Organizes uploaded PDFs into teachable modules with explicit source page mappings before drafting.</span>
-                </li>
-                <li>
-                  <b>Slide-by-Slide Lecture Studio</b>
-                  <span>Synthesizes structured slides with speaker notes, evidence coverage indicators, and targeted per-slide edits.</span>
-                </li>
-                <li>
-                  <b>Human-in-the-Loop Quizzes</b>
-                  <span>Every AI-generated assessment stays in draft status with citation metadata until a professor approves release.</span>
-                </li>
-              </ul>
-            </article>
-
-            <article className="workspace-showcase student">
-              <div className="ws-badge-row">
-                <span className="ws-role-pill teal">STUDENT LEARNING SPACE</span>
-                <span className="ws-tag">Course Tutor + Practice Arena</span>
-              </div>
-              <h3>Study with a cited tutor and practice directly from approved material.</h3>
-
-              <div className="bento-mini-preview student">
-                <div className="bento-cite-chip">OS_Principles.pdf · p.14</div>
-                <div className="bento-match-meter">
-                  <span>Similarity Match</span>
-                  <b>82%</b>
-                </div>
-                <div className="bento-flow-node gate teal">Published Practice Quiz</div>
-              </div>
-
-              <ul className="ws-feature-list">
-                <li>
-                  <b>Course-Isolated Grounded Chat</b>
-                  <span>Select any enrolled course and ask conceptual or exam-prep questions answered only from course uploads.</span>
-                </li>
-                <li>
-                  <b>One-Click Citation Inspector</b>
-                  <span>Audit the exact PDF filename, page number, chunk text, and semantic distance score behind any response.</span>
-                </li>
-                <li>
-                  <b>Published Practice Quizzes</b>
-                  <span>Test mastery on professor-approved assessments with instant explanations grounded to specific source pages.</span>
-                </li>
-              </ul>
-            </article>
-          </div>
-        </section>
-
-        {/* SECTION 3: GROUNDING SAFEGUARDS */}
-        <section id="safeguards" className="landing-section reveal-section">
-          <div className="safeguards-banner">
-            <div className="safeguards-header">
-              <span className="eyebrow">HALLUCINATION MITIGATION</span>
-              <h2>Engineered to reduce hallucination risk—by design.</h2>
-              <p>
-                No LLM pipeline eliminates hallucination completely, so EduForge pairs strict system prompting with pre-generation distance thresholds and transparent chunk inspection.
+          <div className="architecture-grid">
+            <article className="arch-card spatial-card">
+              <div className="arch-number">01</div>
+              <h3 className="arch-title">Document Ingestion &amp; Chunking</h3>
+              <p className="arch-desc">
+                Course PDFs are ingested via PyMuPDF with layout and page boundary retention. Texts
+                are split using boundary-aware semantic chunkers (800 characters, 150 overlap).
               </p>
-              <div className="safeguard-formula">
-                <code>Distance &lt; Threshold</code>
-                <span aria-hidden="true">→</span>
-                <code>Context-Only Prompt</code>
-                <span aria-hidden="true">→</span>
-                <code>Clickable Page Citations</code>
+              <div className="arch-meta">
+                <span>PyMuPDF</span>
+                <span>Recursive Splitting</span>
               </div>
-            </div>
-            <div className="safeguards-grid">
-              {SAFEGUARDS.map((item) => (
-                <article key={item.tag} className="safeguard-card">
-                  <div className="safeguard-card-top">
-                    <div className="safeguard-icon">{item.icon}</div>
-                    <span className="safeguard-tag">{item.tag}</span>
-                  </div>
-                  <h3>{item.title}</h3>
-                  <p>{item.body}</p>
-                </article>
+            </article>
+
+            <article className="arch-card spatial-card">
+              <div className="arch-number">02</div>
+              <h3 className="arch-title">Dense Embeddings &amp; Vector Store</h3>
+              <p className="arch-desc">
+                Text chunks are mapped into 384-dimensional dense vectors using the open-source
+                BAAI/bge-small-en-v1.5 model and indexed in course-scoped ChromaDB collections.
+              </p>
+              <div className="arch-meta">
+                <span>BAAI/bge-small-en</span>
+                <span>ChromaDB</span>
+              </div>
+            </article>
+
+            <article className="arch-card spatial-card">
+              <div className="arch-number">03</div>
+              <h3 className="arch-title">AI Lecture Studio &amp; Slide Generator</h3>
+              <p className="arch-desc">
+                Synthesize multi-slide presentations directly from assigned chapters. Includes
+                learning goals, structured bullet points, presenter notes, and targeted slide regeneration.
+              </p>
+              <div className="arch-meta">
+                <span>FastAPI</span>
+                <span>Targeted Regeneration</span>
+              </div>
+            </article>
+
+            <article className="arch-card spatial-card">
+              <div className="arch-number">04</div>
+              <h3 className="arch-title">Classroom Isolation &amp; RBAC</h3>
+              <p className="arch-desc">
+                Role-based access control separates instructors from enrolled students. Course
+                materials remain strictly isolated, completely preventing cross-course leakage.
+              </p>
+              <div className="arch-meta">
+                <span>Access Codes</span>
+                <span>Metadata Scoping</span>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        {/* INTERACTIVE SYLLABUS AUDIT SANDBOX WITH LIVE STREAMING TYPING */}
+        <section id="sandbox" className="editorial-section editorial-reveal">
+          <div className="section-intro">
+            <span className="section-label">INTERACTIVE AUDIT</span>
+            <h2 className="section-heading">Verify Grounded Answer Synthesis</h2>
+            <p className="section-subtext">
+              Select an exam question below to examine how the system constructs answers strictly
+              from verified syllabus chunks with page citations in real time.
+            </p>
+          </div>
+
+          <div className="sandbox-panel spatial-glow">
+            <div className="sandbox-question-selector">
+              {SAMPLE_QUESTIONS.map((q, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className={`question-select-btn ${activeQuestionIdx === idx ? 'active' : ''}`}
+                  onClick={() => handleSelectQuestion(idx)}
+                >
+                  <span className="q-num">Q{idx + 1}</span>
+                  <span className="q-title">{q.prompt}</span>
+                </button>
               ))}
             </div>
+
+            <div className="sandbox-result-view">
+              <div className="result-header">
+                <div className="result-header-left">
+                  <span className="result-label">SYNTHESIZED GROUNDED RESPONSE</span>
+                  <span className="result-latency">Retrieved in {selectedQuestion.latency}</span>
+                </div>
+                <span className="result-source-status">
+                  <span className="status-indicator-dot small" />
+                  Evidence Verified in ChromaDB
+                </span>
+              </div>
+
+              <div className="result-content">
+                <p className="result-text">
+                  {displayedResponse}
+                  {isTyping && <span className="streaming-cursor" aria-hidden="true">|</span>}
+                </p>
+
+                <div className="result-citations-list">
+                  <span className="citations-header">Retrieved Evidence Sources:</span>
+                  <div className="citations-tags">
+                    {selectedQuestion.citations.map((c, i) => (
+                      <span key={i} className="citation-tag">
+                        <FileTextIcon />
+                        <span>{c}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* BOTTOM CTA */}
-        <section className="landing-cta-band reveal-section">
-          <div className="cta-band-content">
-            <span className="eyebrow">READY TO BEGIN</span>
-            <h2>Step inside your grounded academic workspace.</h2>
-            <p>
-              Sign in with your verified academic account or register a workspace to upload syllabi, synthesize narrated lectures, and launch cited student tutoring.
-            </p>
-            <div className="cta-band-actions">
+        {/* ROLE SELECTION */}
+        <section id="workspaces" className="editorial-section editorial-reveal">
+          <div className="section-intro">
+            <span className="section-label">CLASSROOM ACCESS</span>
+            <h2 className="section-heading">Designed for Educators and Students</h2>
+          </div>
+
+          <div className="workspaces-split">
+            <div className="workspace-column educator spatial-card">
+              <div className="workspace-header">
+                <span className="workspace-type">FOR EDUCATORS &amp; INSTRUCTORS</span>
+                <h3 className="workspace-title">Author, narrate, and administer courses</h3>
+              </div>
+              <ul className="workspace-benefits">
+                <li>Ingest textbooks, syllabi, and lecture transcripts into course-isolated vector stores.</li>
+                <li>Generate multi-slide lectures with structured outlines and presenter speaker notes.</li>
+                <li>Issue course enrollment codes and review student comprehension metrics.</li>
+              </ul>
               <button
                 type="button"
-                className="button button-primary"
+                className="editorial-btn-solid"
                 onClick={() => onOpenAuth('signup')}
               >
-                Create Account <span className="btn-arrow" aria-hidden="true">→</span>
+                <span>Launch Educator Studio</span>
+                <ArrowRightIcon />
               </button>
+            </div>
+
+            <div className="workspace-column student spatial-card">
+              <div className="workspace-header">
+                <span className="workspace-type">FOR STUDENTS &amp; LEARNERS</span>
+                <h3 className="workspace-title">Study from assigned literature without guessing</h3>
+              </div>
+              <ul className="workspace-benefits">
+                <li>Enter your course code to unlock your instructor's approved literature.</li>
+                <li>Query course materials with verified page-level citations for every response.</li>
+                <li>Test your mastery with practice assessments grounded in assigned readings.</li>
+              </ul>
               <button
                 type="button"
-                className="button button-secondary"
+                className="editorial-btn-outline"
                 onClick={() => onOpenAuth('login')}
               >
-                Sign In
+                <span>Enter Student Portal</span>
+                <ArrowRightIcon />
               </button>
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="landing-footer">
-        <div className="landing-footer-inner">
-          <BrandMark size="sm" sublabel="© 2026 EduForge AI · Course-Grounded Teaching & Learning Platform" />
-          <div className="landing-footer-links">
-            <button type="button" onClick={() => scrollToSection('pipeline')}>Pipeline</button>
-            <button type="button" onClick={() => scrollToSection('workspaces')}>Workspaces</button>
-            <button type="button" onClick={() => scrollToSection('safeguards')}>Grounding</button>
-            <button type="button" onClick={() => onOpenAuth('login')}>Sign In</button>
+      {/* FOOTER */}
+      <footer className="editorial-footer">
+        <div className="footer-container">
+          <div className="footer-left">
+            <BrandMark size="sm" sublabel="Course-Grounded Academic Workspace" />
+            <p className="footer-note">
+              An open, verifiable academic platform for curriculum authoring and syllabus-grounded tutoring.
+            </p>
           </div>
+          <div className="footer-nav">
+            <button type="button" onClick={() => scrollTo('architecture')}>Architecture</button>
+            <button type="button" onClick={() => scrollTo('sandbox')}>Interactive Audit</button>
+            <button type="button" onClick={() => onOpenAuth('login')}>Sign In</button>
+            <button type="button" onClick={() => onOpenAuth('signup')}>Create Account</button>
+          </div>
+        </div>
+        <div className="footer-copyright">
+          <span>&copy; 2026 EduForge AI. Designed with academic integrity.</span>
+          <span className="footer-tagline">Open-source RAG architecture.</span>
         </div>
       </footer>
     </div>

@@ -446,3 +446,62 @@ export async function removeCourseStudent(courseId, userId) {
   }
   return true;
 }
+
+// ----------------- Video Lecture & ElevenLabs Voice Studio -----------------
+
+export async function getAvailableVoices() {
+  const res = await apiFetch('/voices');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to load voices');
+  }
+  return res.json();
+}
+
+export async function cloneProfessorVoice(formData) {
+  const token = getAccessToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const res = await fetch(`${API_BASE_URL}/voices/clone`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to clone professor voice');
+  }
+  return res.json();
+}
+
+export async function getLectureVideoManifest(lectureId, voiceId = null) {
+  const query = voiceId ? `?voice_id=${encodeURIComponent(voiceId)}` : '';
+  const res = await apiFetch(`/lectures/${lectureId}/video-manifest${query}`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to load video lecture manifest');
+  }
+  return res.json();
+}
+
+export async function synthesizeSlideAudio(lectureId, slideId, voiceId = null) {
+  const query = voiceId ? `?voice_id=${encodeURIComponent(voiceId)}` : '';
+  const res = await apiFetch(`/lectures/${lectureId}/slides/${slideId}/synthesize-audio${query}`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to synthesize slide audio');
+  }
+  return res.json();
+}
+
+export function getSlideAudioStreamUrl(lectureId, slideId, voiceId = null) {
+  const token = getAccessToken();
+  const params = new URLSearchParams();
+  if (voiceId) params.set('voice_id', voiceId);
+  if (token) params.set('token', token);
+  const qs = params.toString();
+  return `${API_BASE_URL}/lectures/${lectureId}/slides/${slideId}/audio${qs ? `?${qs}` : ''}`;
+}

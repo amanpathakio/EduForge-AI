@@ -2,6 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import MessageBubble from './MessageBubble';
 import StarterPrompts from './StarterPrompts';
 import { sendChatMessage } from '../services/api';
+import {
+  isSpeechRecognitionSupported,
+  isSpeechSynthesisSupported,
+  speakText,
+  startVoiceListening,
+  stopSpeaking,
+} from '../lib/speech';
 
 export default function ChatPanel({
   chunkCount = 0,
@@ -14,9 +21,25 @@ export default function ChatPanel({
   const [inputText, setInputText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [allRetrievedChunks, setAllRetrievedChunks] = useState([]);
+  const [isListening, setIsListening] = useState(false);
+  const [autoSpeak, setAutoSpeak] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState('');
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const autoSpeakRef = useRef(false);
+
+  useEffect(() => {
+    autoSpeakRef.current = autoSpeak;
+  }, [autoSpeak]);
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop();
+      stopSpeaking();
+    };
+  }, []);
 
   // Auto scroll to bottom when messages change
   useEffect(() => {
@@ -70,6 +93,9 @@ export default function ChatPanel({
       };
 
       setMessages((prev) => prev.filter((m) => m.id !== skeletonId).concat(assistantMsg));
+      if (autoSpeakRef.current && isSpeechSynthesisSupported()) {
+        speakText(data.answer);
+      }
     } catch (error) {
       console.error('Chat error:', error);
       const errorMsg = {
@@ -98,10 +124,43 @@ export default function ChatPanel({
   };
 
   const handleClearChat = () => {
+    stopSpeaking();
     if (messages.length === 0) return;
     setMessages([]);
     setAllRetrievedChunks([]);
   };
+
+  const handleToggleMic = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    stopSpeaking();
+    setVoiceStatus('');
+    setIsListening(true);
+
+    recognitionRef.current = startVoiceListening({
+      onInterim: (transcript) => setInputText(transcript),
+      onResult: (finalTranscript) => {
+        setIsListening(false);
+        if (finalTranscript) {
+          submitQuestion(finalTranscript);
+        }
+      },
+      onError: (msg) => {
+        setVoiceStatus(msg);
+        setIsListening(false);
+      },
+      onEnd: () => {
+        setIsListening(false);
+      },
+    });
+  };
+
+  const micSupported = isSpeechRecognitionSupported();
+  const ttsSupported = isSpeechSynthesisSupported();
 
   return (
     <section className="chat-panel">
@@ -114,12 +173,26 @@ export default function ChatPanel({
               {courseContext ? `Grounded in "${courseContext.title}" course documents.` : 'Ask questions based on your course material.'}
             </p>
           </div>
-          <button
-            id="clear-chat-btn"
-            className="icon-button"
-            title="Clear Chat History"
-            onClick={handleClearChat}
-          >
+          <div className="chat-header-actions">
+            {ttsSupported && (
+              <button
+                type="button"
+                className={`voice-pill-toggle ${autoSpeak ? 'on' : ''}`}
+                onClick={() => {
+                  if (autoSpeak) stopSpeaking();
+                  setAutoSpeak((v) => !v);
+                }}
+                title="Automatically read AI tutor replies aloud"
+              >
+                {autoSpeak ? 'Voice On' : 'Voice Replies'}
+              </button>
+            )}
+            <button
+              id="clear-chat-btn"
+              className="icon-button"
+              title="Clear Chat History"
+              onClick={handleClearChat}
+            >
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"
@@ -128,13 +201,14 @@ export default function ChatPanel({
                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
               />
             </svg>
-          </button>
+            </button>
+          </div>
         </div>
 
         {/* Chat Message Area */}
         <div id="chat-messages" className="chat-messages-container">
           {messages.length === 0 ? (
-            <div id="welcome-screen" className="welcome-screen">
+            <div id="welcome-screen" className="welcome-screen compact">
               <div className="welcome-icon-container">
                 <svg className="welcome-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
@@ -145,34 +219,17 @@ export default function ChatPanel({
                   />
                 </svg>
               </div>
-              <h3 className="welcome-heading">Welcome to EduForge AI</h3>
-              <p className="welcome-tagline">Your course-grounded intelligent assistant.</p>
+              <span className={`tutor-grounding-pill ${chunkCount > 0 ? 'ready' : ''}`}>
+                <i aria-hidden="true" />
+                {chunkCount > 0 ? 'Course PDFs Indexed' : 'Awaiting Course PDFs'}
+              </span>
+              <h3 className="welcome-heading">
+                {courseContext ? `Ask ${courseContext.title}` : 'Course Tutor AI'}
+              </h3>
+              <p className="welcome-tagline">
+                Answers strictly grounded in syllabus pages with citations.
+              </p>
 
-              <div className="welcome-steps">
-                <div className="step-card">
-                  <span className="step-num">1</span>
-                  <h4 className="step-title">Upload Materials</h4>
-                  <p className="step-desc">
-                    Drop a course PDF on the left. The system will extract, chunk, and embed the text.
-                  </p>
-                </div>
-                <div className="step-card">
-                  <span className="step-num">2</span>
-                  <h4 className="step-title">Ask Questions</h4>
-                  <p className="step-desc">
-                    Type your queries. The RAG engine retrieves course content relevant to your query.
-                  </p>
-                </div>
-                <div className="step-card">
-                  <span className="step-num">3</span>
-                  <h4 className="step-title">Audit Citations</h4>
-                  <p className="step-desc">
-                    Review the generated answer and click citation sources to inspect original text chunks.
-                  </p>
-                </div>
-              </div>
-
-              {/* Suggestions */}
               <StarterPrompts
                 isVisible={chunkCount > 0}
                 onSelectPrompt={(promptText) => submitQuestion(promptText)}
@@ -199,18 +256,32 @@ export default function ChatPanel({
         </div>
 
         {/* Chat Input Form */}
+        {voiceStatus && <p className="voice-notice-bar">{voiceStatus}</p>}
         <form id="chat-form" className="chat-input-form" onSubmit={handleFormSubmit}>
           <div className="input-wrapper">
             <textarea
               id="chat-input"
               ref={textareaRef}
-              placeholder="Ask a question about the course materials..."
+              placeholder={isListening ? 'Listening… speak your question' : 'Ask or speak a question about the course...'}
               rows="1"
               required
               value={inputText}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
             />
+            <button
+              type="button"
+              className={`chat-mic-btn ${isListening ? 'listening' : ''}`}
+              onClick={handleToggleMic}
+              disabled={isGenerating}
+              title={micSupported ? (isListening ? 'Stop voice input' : 'Speak question') : 'Voice input unavailable in this browser'}
+              aria-label={isListening ? 'Stop voice input' : 'Start voice input'}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 01-14 0v-2M12 19v4" />
+              </svg>
+            </button>
             <button
               type="submit"
               id="send-btn"

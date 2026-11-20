@@ -4,6 +4,9 @@ import ChatPanel from '../components/ChatPanel';
 import QuizPanel from '../components/QuizPanel';
 import StudentQuizPlayer from '../components/StudentQuizPlayer';
 import CourseArchitectPanel from '../components/CourseArchitectPanel';
+import VoiceLectureChat from '../components/VoiceLectureChat';
+import VideoLecturePlayer from '../components/VideoLecturePlayer';
+import VoiceCloneModal from '../components/VoiceCloneModal';
 import {
   getCourseDocuments,
   uploadCourseDocument,
@@ -28,6 +31,7 @@ export default function CourseWorkspace({
 }) {
   const canManage = Boolean(isEducator || course?.my_role === 'professor');
   const [activeTab, setActiveTab] = useState('overview');
+  const [showReaderVoiceChat, setShowReaderVoiceChat] = useState(true);
   const [documents, setDocuments] = useState([]);
   const [lectures, setLectures] = useState([]);
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
@@ -38,6 +42,9 @@ export default function CourseWorkspace({
   const [readingSlideIdx, setReadingSlideIdx] = useState(0);
   const [isLoadingReader, setIsLoadingReader] = useState(false);
   const [publishingLectureId, setPublishingLectureId] = useState(null);
+  const [videoLectureTarget, setVideoLectureTarget] = useState(null);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState(null);
 
   // Educator invites & roster state
   const [invites, setInvites] = useState([]);
@@ -180,20 +187,20 @@ export default function CourseWorkspace({
       {/* Course Top Header */}
       <div className="course-header glass-card">
         <div className="course-header-left">
-          <button
-            className="back-btn"
-            onClick={onBackToCourses}
-            title="Back to Courses"
-          >
-            ← {canManage ? 'All Courses' : 'My Courses'}
-          </button>
-          <div className="course-title-section">
+          <div className="course-meta-topline">
+            <button
+              className="back-btn"
+              onClick={onBackToCourses}
+              title="Back to Courses"
+            >
+              ← {canManage ? 'All Courses' : 'My Courses'}
+            </button>
             <span className="badge course-badge">{canManage ? 'Educator Workspace' : 'Enrolled Course'}</span>
-            <h1 className="course-main-title">{course.title}</h1>
-            {course.description && (
-              <p className="course-main-desc">{course.description}</p>
-            )}
           </div>
+          <h1 className="course-main-title">{course.title}</h1>
+          {course.description && (
+            <p className="course-main-desc">{course.description}</p>
+          )}
         </div>
 
         {canManage && (
@@ -247,7 +254,7 @@ export default function CourseWorkspace({
         </button>
         {canManage && (
           <button className={`tab-btn ${activeTab === 'architect' ? 'active' : ''}`} onClick={() => setActiveTab('architect')}>
-            Course Architect
+            Course Planner
           </button>
         )}
         <button className={`tab-btn ${activeTab === 'quizzes' ? 'active' : ''}`} onClick={() => setActiveTab('quizzes')}>
@@ -288,47 +295,90 @@ export default function CourseWorkspace({
             <div className="overview-actions-grid">
               {canManage && (
                 <div className="action-card glass-card" onClick={() => setActiveTab('documents')}>
-                  <div className="action-icon">📄</div>
-                  <h3>Upload Course Materials</h3>
-                  <p>Drag and drop lecture PDFs to ground student questions and lecture synthesis.</p>
+                  <div className="action-icon-svg indigo">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                  </div>
+                  <h3>Upload PDFs</h3>
+                  <p>Ground tutor &amp; slides in course PDFs.</p>
                   <span className="action-link">Manage Documents →</span>
                 </div>
               )}
 
               <div className="action-card glass-card" onClick={() => setActiveTab('ask-ai')}>
-                <div className="action-icon">💬</div>
-                <h3>Ask Course Tutor</h3>
-                <p>Chat with AI grounded strictly in this course&apos;s documents with verified page citations.</p>
+                <div className="action-icon-svg blue">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </div>
+                <h3>Course Tutor</h3>
+                <p>Page-cited Q&amp;A scoped to this syllabus.</p>
                 <span className="action-link">Open Tutor →</span>
               </div>
 
               {canManage ? (
                 <>
                   <div className="action-card glass-card" onClick={() => onOpenStudioForCourse(course)}>
-                    <div className="action-icon">🎙️</div>
-                    <h3>AI Lecture Studio</h3>
-                    <p>Synthesize grounded, slide-by-slide lectures with speaker notes and citations.</p>
+                    <div className="action-icon-svg violet">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      </svg>
+                    </div>
+                    <h3>Lecture Studio</h3>
+                    <p>Build grounded decks &amp; speaker notes.</p>
                     <span className="action-link">Open Studio →</span>
                   </div>
+                  <div className="action-card glass-card" onClick={() => setActiveTab('architect')}>
+                    <div className="action-icon-svg amber">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                        <polyline points="2 17 12 22 22 17" />
+                        <polyline points="2 12 12 17 22 12" />
+                      </svg>
+                    </div>
+                    <h3>Course Planner</h3>
+                    <p>Structure syllabus modules &amp; slide drafts.</p>
+                    <span className="action-link">Open Planner →</span>
+                  </div>
                   <div className="action-card glass-card" onClick={() => setActiveTab('roster')}>
-                    <div className="action-icon">🔑</div>
-                    <h3>Invite &amp; Manage Students</h3>
-                    <p>Share invite codes like EF-XXXXXX and monitor enrolled learners&apos; quiz accuracy.</p>
+                    <div className="action-icon-svg emerald">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                      </svg>
+                    </div>
+                    <h3>Roster &amp; Invites</h3>
+                    <p>Share invite codes &amp; track progress.</p>
                     <span className="action-link">Open Roster →</span>
                   </div>
                 </>
               ) : (
                 <>
                   <div className="action-card glass-card" onClick={() => setActiveTab('lectures')}>
-                    <div className="action-icon">📑</div>
-                    <h3>Review Published Lectures</h3>
-                    <p>Study slide decks approved by your professor with direct page-source citations.</p>
+                    <div className="action-icon-svg violet">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                        <line x1="8" y1="21" x2="16" y2="21" />
+                        <line x1="12" y1="17" x2="12" y2="21" />
+                      </svg>
+                    </div>
+                    <h3>Published Lectures</h3>
+                    <p>Review professor-approved decks.</p>
                     <span className="action-link">View Lectures →</span>
                   </div>
                   <div className="action-card glass-card" onClick={() => setActiveTab('quizzes')}>
-                    <div className="action-icon">✓</div>
+                    <div className="action-icon-svg emerald">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
                     <h3>Practice Quizzes</h3>
-                    <p>Complete professor-approved assessments and verify explanations from course pages.</p>
+                    <p>Test understanding with cited feedback.</p>
                     <span className="action-link">Start Practice →</span>
                   </div>
                 </>
@@ -338,7 +388,13 @@ export default function CourseWorkspace({
         )}
 
         {activeTab === 'architect' && canManage && (
-          <CourseArchitectPanel courseId={course.id} documentCount={documents.length} onOpenQuizzes={() => setActiveTab('quizzes')} />
+          <CourseArchitectPanel
+            courseId={course.id}
+            documentCount={documents.length}
+            onOpenQuizzes={() => setActiveTab('quizzes')}
+            onOpenLectures={() => setActiveTab('lectures')}
+            onOpenDocuments={() => setActiveTab('documents')}
+          />
         )}
 
         {/* DOCUMENTS TAB */}
@@ -406,9 +462,29 @@ export default function CourseWorkspace({
                   <button type="button" className="back-btn" onClick={() => setReadingLecture(null)}>
                     ← All Published Lectures
                   </button>
-                  <span className="meta-pill">
-                    Slide {readingSlideIdx + 1} / {readingLecture.slides?.length || 0}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                    <button
+                      type="button"
+                      className="button button-sm button-primary"
+                      onClick={() => setVideoLectureTarget({ id: readingLecture.id, title: readingLecture.title })}
+                      title="Watch full synchronized 16:9 video lecture"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: 5 }}>
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                      </svg>
+                      Watch Video
+                    </button>
+                    <button
+                      type="button"
+                      className={`button button-sm ${showReaderVoiceChat ? 'button-primary' : 'button-secondary'}`}
+                      onClick={() => setShowReaderVoiceChat((v) => !v)}
+                    >
+                      {showReaderVoiceChat ? 'Hide Voice Chat' : 'Voice Chat'}
+                    </button>
+                    <span className="meta-pill">
+                      Slide {readingSlideIdx + 1} / {readingLecture.slides?.length || 0}
+                    </span>
+                  </div>
                 </div>
                 <h2>{readingLecture.title}</h2>
                 {activeSlide ? (
@@ -460,6 +536,18 @@ export default function CourseWorkspace({
                 ) : (
                   <p>No slides found in this lecture.</p>
                 )}
+
+                {showReaderVoiceChat && activeSlide && (
+                  <VoiceLectureChat
+                    key={`student-voice-${readingLecture.id}-${activeSlide.id || readingSlideIdx}`}
+                    courseId={course.id}
+                    lectureTitle={readingLecture.title}
+                    slide={activeSlide}
+                    roleLabel="LECTURE VOICE CHAT"
+                    onOpenCitation={onOpenCitation}
+                    onClose={() => setShowReaderVoiceChat(false)}
+                  />
+                )}
               </div>
             ) : (
               <>
@@ -468,8 +556,8 @@ export default function CourseWorkspace({
                     <h3>{canManage ? 'Course Lectures' : 'Published Lectures'}</h3>
                     <p>
                       {canManage
-                        ? 'Draft and publish lectures generated from course documents.'
-                        : 'Lectures reviewed and published by your professor.'}
+                        ? 'Drafts & published modules.'
+                        : 'Approved decks from your professor.'}
                     </p>
                   </div>
                   {canManage && (
@@ -485,21 +573,25 @@ export default function CourseWorkspace({
                 {isLoadingLectures || isLoadingReader ? (
                   <div className="loading-state">Loading lectures...</div>
                 ) : lectures.length === 0 ? (
-                  <div className="empty-substate glass-card">
-                    <div className="empty-icon">🎙️</div>
-                    <h4>{canManage ? 'No Lectures Generated Yet' : 'No Published Lectures Yet'}</h4>
-                    <p>
+                  <div className="empty-substate glass-card clean-empty">
+                    <div className="empty-svg-badge" aria-hidden="true">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      </svg>
+                    </div>
+                    <h4>{canManage ? 'No lectures yet' : 'No published lectures yet'}</h4>
+                    <p className="clean-empty-sub">
                       {canManage
-                        ? 'Use Lecture Studio to synthesize a full slide deck with citations from your course PDFs.'
-                        : 'Your professor has not published a lecture deck for this course yet.'}
+                        ? 'Synthesize a grounded slide deck from course PDFs.'
+                        : 'Check back once your professor publishes a deck.'}
                     </p>
                     {canManage && (
                       <button
                         className="button button-primary"
                         onClick={() => onOpenStudioForCourse(course)}
-                        style={{ marginTop: '1rem' }}
                       >
-                        Generate First Lecture
+                        Generate Lecture
                       </button>
                     )}
                   </div>
@@ -526,9 +618,17 @@ export default function CourseWorkspace({
                         </div>
                         <div className="lecture-card-footer">
                           <span className="meta-pill">
-                            ⏱️ {lec.duration_minutes} min · 📑 {lec.slide_count || 0} slides
+                            {lec.duration_minutes}m · {lec.slide_count || 0} slides
                           </span>
                           <div style={{ display: 'flex', gap: '0.45rem' }}>
+                            <button
+                              type="button"
+                              className="button button-secondary button-sm"
+                              onClick={() => setVideoLectureTarget({ id: lec.id, title: lec.title })}
+                              title="Watch Synchronized Video Lecture"
+                            >
+                              ▶ Video
+                            </button>
                             {canManage && lec.status !== 'published' && (
                               <button
                                 className="button button-primary button-sm"
@@ -583,7 +683,7 @@ export default function CourseWorkspace({
               {isLoadingRoster ? (
                 <div className="loading-state">Loading invite codes...</div>
               ) : invites.length === 0 ? (
-                <p className="sub-text">No active invite codes yet. Generate one so students can join this course.</p>
+                <p className="sub-text">No active codes yet.</p>
               ) : (
                 <div className="invite-code-list">
                   {invites.map((inv) => (
@@ -624,7 +724,7 @@ export default function CourseWorkspace({
               {isLoadingRoster ? (
                 <div className="loading-state">Loading roster...</div>
               ) : students.length === 0 ? (
-                <p className="sub-text">No students have joined yet. Share an invite code on the left to enroll students.</p>
+                <p className="sub-text">No learners enrolled yet.</p>
               ) : (
                 <div className="student-roster-list">
                   {students.map((st) => (
@@ -648,6 +748,25 @@ export default function CourseWorkspace({
               )}
             </section>
           </div>
+        )}
+        {/* VIDEO LECTURE PLAYER & VOICE MODAL */}
+        {videoLectureTarget && (
+          <VideoLecturePlayer
+            lectureId={videoLectureTarget.id}
+            lectureTitle={videoLectureTarget.title}
+            initialVoiceId={selectedVoice?.voice_id}
+            onClose={() => setVideoLectureTarget(null)}
+            onOpenVoiceModal={canManage ? () => setShowVoiceModal(true) : null}
+          />
+        )}
+
+        {showVoiceModal && (
+          <VoiceCloneModal
+            isOpen={showVoiceModal}
+            onClose={() => setShowVoiceModal(false)}
+            selectedVoiceId={selectedVoice?.voice_id}
+            onSelectVoice={(v) => setSelectedVoice(v)}
+          />
         )}
       </div>
     </div>

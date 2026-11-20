@@ -13,7 +13,7 @@ except ImportError:  # Local developer environments must fail closed until requi
     jwt = None
     PyJWKClient = None
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -128,12 +128,19 @@ def verify_supabase_token(token: str) -> dict:
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer),
+    token: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ) -> Profile:
-    if not credentials or credentials.scheme.lower() != "bearer":
+    raw_token = None
+    if credentials and getattr(credentials, "scheme", "").lower() == "bearer":
+        raw_token = credentials.credentials
+    elif token:
+        raw_token = token
+
+    if not raw_token:
         _unauthorized()
-    claims = verify_supabase_token(credentials.credentials)
+    claims = verify_supabase_token(raw_token)
     subject = claims.get("sub")
     if not isinstance(subject, str) or not subject:
         _unauthorized("Token subject is invalid.")
@@ -170,6 +177,8 @@ def is_course_manager(db: Session, course_id: str, user: Profile) -> bool:
     course = db.get(Course, course_id)
     if not course:
         return False
+    if course.owner_id is None and user.role == "professor":
+        return True
     if course.owner_id == user.id:
         return True
     membership = db.scalar(
@@ -189,7 +198,7 @@ def require_course_access(
     course = db.get(Course, course_id)
     if not course:
         raise HTTPException(status_code=404, detail="Course not found.")
-    if user.role == "admin":
+    if user.role == "admin" or course.owner_id is None:
         return course
     member = db.scalar(
         select(CourseMembership).where(

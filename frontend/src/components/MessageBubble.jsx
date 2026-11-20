@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import CitationBadge from './CitationBadge';
+import { isSpeechSynthesisSupported, speakText, stopSpeaking } from '../lib/speech';
 
 function findMatchedChunk(sourceStr, messageChunks = [], allChunks = []) {
   if (!sourceStr) return null;
@@ -20,6 +21,8 @@ function findMatchedChunk(sourceStr, messageChunks = [], allChunks = []) {
 }
 
 export default function MessageBubble({ message, allChunks = [], onCitationClick }) {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
   if (message.isSkeleton) {
     return (
       <div className="chat-msg assistant skeleton">
@@ -33,6 +36,20 @@ export default function MessageBubble({ message, allChunks = [], onCitationClick
   }
 
   const isUser = message.sender === 'user';
+  const ttsSupported = isSpeechSynthesisSupported();
+
+  const toggleSpeak = () => {
+    if (isSpeaking) {
+      stopSpeaking();
+      setIsSpeaking(false);
+      return;
+    }
+    speakText(message.text, {
+      onStart: () => setIsSpeaking(true),
+      onEnd: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false),
+    });
+  };
 
   return (
     <div className={`chat-msg ${isUser ? 'user' : 'assistant'}`}>
@@ -43,6 +60,22 @@ export default function MessageBubble({ message, allChunks = [], onCitationClick
           <ReactMarkdown>{message.text}</ReactMarkdown>
         )}
       </div>
+
+      {!isUser && ttsSupported && (
+        <div className="msg-voice-row">
+          <button
+            type="button"
+            className={`msg-speak-btn ${isSpeaking ? 'speaking' : ''}`}
+            onClick={toggleSpeak}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+              <path strokeLinecap="round" d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+            </svg>
+            {isSpeaking ? 'Stop Audio' : 'Listen'}
+          </button>
+        </div>
+      )}
 
       {!isUser && message.sources && message.sources.length > 0 && (
         <div className="msg-citations">

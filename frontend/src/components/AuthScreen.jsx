@@ -1,13 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { loginAccount, registerAccount } from '../lib/auth';
+import { loginAccount, registerAccount, resetPasswordAccount } from '../lib/auth';
 import BrandMark from './BrandMark';
 import ThemeToggle from './ThemeToggle';
 import NeuralBackdrop from './NeuralBackdrop';
-
-const WAVE_BARS = [
-  28, 56, 40, 82, 64, 94, 48, 72, 88, 54, 96, 62,
-  44, 78, 90, 52, 68, 86, 42, 74, 58, 80, 46, 34,
-];
 
 function MailIcon() {
   return (
@@ -23,6 +18,24 @@ function LockIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
       <rect x="4" y="11" width="16" height="9" rx="2.5" strokeWidth="1.8" />
       <path d="M8 11V7.5a4 4 0 018 0V11" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+      <circle cx="12" cy="8" r="4" strokeWidth="1.8" />
+      <path d="M5 20a7 7 0 0114 0" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function KeyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+      <circle cx="7.5" cy="15.5" r="4.5" strokeWidth="1.8" />
+      <path d="M10.8 12.2L20 3m-3 3l2 2m-4 0l2 2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -57,7 +70,6 @@ export default function AuthScreen({
   onToggleTheme,
 }) {
   const [mode, setMode] = useState(initialMode || 'login');
-  const [showcaseRole, setShowcaseRole] = useState('professor');
   const [signupRole, setSignupRole] = useState('student');
   const [fullName, setFullName] = useState('');
   const [educatorCode, setEducatorCode] = useState('');
@@ -74,12 +86,6 @@ export default function AuthScreen({
     setIsError(false);
   }, [initialMode]);
 
-  const handlePointerMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    e.currentTarget.style.setProperty('--mx', `${e.clientX - rect.left}px`);
-    e.currentTarget.style.setProperty('--my', `${e.clientY - rect.top}px`);
-  };
-
   const switchMode = (nextMode) => {
     setMode(nextMode);
     setMessage('');
@@ -91,81 +97,74 @@ export default function AuthScreen({
 
   const submit = async (event) => {
     event.preventDefault();
-    if (mode === 'reset') {
-      setIsError(false);
-      setMessage('Ask your institutional administrator to reset an existing account password.');
-      return;
-    }
-
     setBusy(true);
     setMessage('');
     setIsError(false);
 
     try {
-      setMessage(mode === 'login' ? 'Signing in securely…' : 'Creating your account…');
-      const session =
-        mode === 'signup'
-          ? await registerAccount({
-              email,
-              password,
-              fullName,
-              requestedRole: signupRole,
-              educatorCode: signupRole === 'professor' ? educatorCode : undefined,
-            })
-          : await loginAccount({ email, password });
+      let session = null;
+      if (mode === 'reset') {
+        setMessage('Updating credentials…');
+        session = await resetPasswordAccount({ email, newPassword: password });
+      } else if (mode === 'signup') {
+        setMessage('Configuring academic workspace…');
+        session = await registerAccount({
+          email,
+          password,
+          fullName,
+          requestedRole: signupRole,
+          educatorCode: signupRole === 'professor' ? educatorCode : undefined,
+        });
+      } else {
+        setMessage('Authenticating credentials…');
+        session = await loginAccount({ email, password });
+      }
 
       if (!session?.access_token) {
         setIsError(true);
-        setMessage('Authentication did not return an active session. Please try again.');
+        setMessage('Authentication did not return an active session. Please check your credentials.');
         return;
       }
 
       setIsError(false);
-      setMessage(mode === 'signup' ? 'Account created. Opening your workspace…' : 'Signed in. Opening your workspace…');
+      setMessage(
+        mode === 'signup'
+          ? 'Workspace initialized. Redirecting…'
+          : mode === 'reset'
+            ? 'Password updated. Entering workspace…'
+            : 'Signed in. Redirecting to workspace…'
+      );
+
       if (window.location.pathname !== '/') {
         window.history.pushState({}, '', '/');
+        window.dispatchEvent(new PopStateEvent('popstate'));
       }
     } catch (error) {
       setIsError(true);
-      setMessage(error.message || 'Authentication failed.');
+      const rawMsg = error.message || '';
+      setMessage(rawMsg || 'Authentication failed. Please check your credentials.');
     } finally {
       setBusy(false);
     }
   };
 
-  const title =
-    mode === 'signup'
-      ? 'Create your studio.'
-      : mode === 'reset'
-        ? 'Reset password.'
-        : 'Welcome back.';
-
-  const helper =
-    mode === 'signup'
-      ? 'Launch a role-isolated course workspace powered by cited RAG.'
-      : mode === 'reset'
-        ? 'Enter your academic email and we will send a recovery link.'
-        : 'Sign in to resume your lectures, courses, and grounded AI workspace.';
-
-  const modeLabel =
-    mode === 'signup'
-      ? 'NEW ACADEMIC ACCESS'
-      : mode === 'reset'
-        ? 'ACCOUNT RECOVERY'
-        : 'ROLE-VERIFIED LOGIN';
-
   return (
-    <main className="auth-shell" onPointerMove={handlePointerMove}>
+    <main className="auth-shell auth-monolith-shell">
       <NeuralBackdrop theme={theme} />
       <div className="auth-grid-bg" aria-hidden="true" />
-      <div className="auth-spotlight" aria-hidden="true" />
-      <div className="auth-orb auth-orb-one" aria-hidden="true" />
-      <div className="auth-orb auth-orb-two" aria-hidden="true" />
+      <div className="auth-glow-top" aria-hidden="true" />
+      <div className="auth-glow-bottom" aria-hidden="true" />
 
-      <header className="auth-topbar">
+      {/* Top Floating Anchor Bar */}
+      <header className="auth-monolith-topbar">
         {onBackToLanding ? (
-          <button type="button" className="auth-back-btn" onClick={onBackToLanding}>
-            ← Back to overview
+          <button
+            type="button"
+            className="auth-back-pill"
+            onClick={onBackToLanding}
+            title="Return to home page"
+          >
+            ← Back to Home
           </button>
         ) : (
           <span />
@@ -173,143 +172,36 @@ export default function AuthScreen({
         {onToggleTheme && <ThemeToggle theme={theme} onToggle={onToggleTheme} compact />}
       </header>
 
-      <div className="auth-grid">
-        {/* LEFT: LIVE KINETIC ENGINE SHOWCASE */}
-        <section className="auth-showcase">
-          <div className="auth-brand-wrap">
-            <BrandMark size="md" sublabel="Course-Grounded AI Teaching Studio" />
-          </div>
+      {/* Centerpiece Golden-Ratio Monolith Card */}
+      <div className="auth-monolith-container">
+        <section className="auth-monolith-card">
+          <div className="auth-monolith-rim" aria-hidden="true" />
 
-          <p className="eyebrow">NEXT-GEN ACADEMIC ENGINE</p>
-          <h1>
-            Living lectures.
-            <br />
-            <em>Audited truth.</em>
-          </h1>
-          <p className="auth-showcase-lead">
-            Turn static course PDFs into grounded slide decks, voice-narrated teaching modules, and cited student Q&amp;A with strict role boundaries.
-          </p>
-
-          {/* Animated Kinetic Stage */}
-          <div className="kinetic-stage">
-            <div className="kinetic-stage-head">
-              <div className="kinetic-role-pills" role="tablist" aria-label="Role architecture preview">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={showcaseRole === 'professor'}
-                  className={showcaseRole === 'professor' ? 'active' : ''}
-                  onClick={() => setShowcaseRole('professor')}
-                >
-                  Professor Studio
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={showcaseRole === 'student'}
-                  className={showcaseRole === 'student' ? 'active teal' : 'teal'}
-                  onClick={() => setShowcaseRole('student')}
-                >
-                  Student Space
-                </button>
-              </div>
-              <span className="kinetic-live-pill">
-                <i aria-hidden="true" />
-                {showcaseRole === 'professor' ? 'VOICE + SLIDES' : 'CITED ACCESS'}
-              </span>
-            </div>
-
-            {showcaseRole === 'professor' ? (
-              <div className="kinetic-body">
-                {/* Animated Pipeline Packet Flow */}
-                <div className="kinetic-beam-rail">
-                  <div className="beam-node">CS301.pdf</div>
-                  <div className="beam-track" aria-hidden="true">
-                    <span className="beam-pulse" />
-                  </div>
-                  <div className="beam-node mid">Indexed Vault</div>
-                  <div className="beam-track" aria-hidden="true">
-                    <span className="beam-pulse delay" />
-                  </div>
-                  <div className="beam-node end">Lecture Studio</div>
-                </div>
-
-                {/* Live Voice Synthesis Visualizer */}
-                <div className="voice-wave-card">
-                  <div className="voice-wave-meta">
-                    <span>PROFESSOR VOICE SYNTHESIS PREVIEW</span>
-                    <code>ACTIVE STREAM</code>
-                  </div>
-                  <div className="voice-wave-bars" aria-hidden="true">
-                    {WAVE_BARS.map((height, idx) => (
-                      <span
-                        key={idx}
-                        style={{
-                          '--bar-h': `${height}%`,
-                          '--bar-delay': `${(idx * 0.07).toFixed(2)}s`,
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <div className="voice-caption-bar">
-                    <span className="caption-tag">SLIDE 03</span>
-                    <p>&ldquo;Round Robin guarantees bounded response across circular queues…&rdquo;</p>
-                  </div>
-                </div>
-              </div>
+          {/* Clean Brand Mark (Clickable to return Home) */}
+          <div className="auth-monolith-brand">
+            {onBackToLanding ? (
+              <button
+                type="button"
+                className="auth-brand-btn"
+                onClick={onBackToLanding}
+                title="EduForge AI — Click to return to Home"
+              >
+                <BrandMark size="md" sublabel="Course-Grounded AI Studio" />
+              </button>
             ) : (
-              <div className="kinetic-body">
-                <div className="student-rag-stage">
-                  <div className="student-match-row">
-                    <div>
-                      <span className="match-kicker">SEMANTIC CHUNK RETRIEVAL</span>
-                      <b>OS_Principles.pdf · Page 14</b>
-                    </div>
-                    <span className="match-score-pill">82% Match</span>
-                  </div>
-                  <div className="kinetic-scan-bar" aria-hidden="true">
-                    <span className="scan-sweep" />
-                  </div>
-                  <div className="student-boundary-grid">
-                    <div className="boundary-pill allowed">
-                      <span>✓</span>
-                      <div>
-                        <b>Published Lectures &amp; Quizzes</b>
-                        <small>Unlocked upon course access</small>
-                      </div>
-                    </div>
-                    <div className="boundary-pill locked">
-                      <span>⌘</span>
-                      <div>
-                        <b>Draft Decks &amp; Answer Keys</b>
-                        <small>Restricted to Professor role</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <BrandMark size="md" sublabel="Course-Grounded AI Studio" />
             )}
           </div>
-        </section>
 
-        {/* RIGHT: ROTATING CONIC BEAM AUTH CARD */}
-        <div className="auth-card-beam">
-          <section className="auth-card" aria-label="Authentication form">
-            <div className="auth-mobile-brand">
-              <BrandMark size="sm" />
-            </div>
-
-            {mode !== 'reset' && (
-              <div className="auth-mode-tabs" role="tablist" aria-label="Authentication mode">
-                <span
-                  className={`auth-tab-slider ${mode === 'signup' ? 'right' : ''}`}
-                  aria-hidden="true"
-                />
+          {/* Mode Switcher Segmented Pills */}
+          {mode !== 'reset' && (
+            <div className="auth-segmented-dock" role="tablist">
+              <div className="auth-segmented-pills">
                 <button
                   type="button"
                   role="tab"
                   aria-selected={mode === 'login'}
-                  className={mode === 'login' ? 'active' : ''}
+                  className={`auth-segmented-pill ${mode === 'login' ? 'active' : ''}`}
                   onClick={() => switchMode('login')}
                 >
                   Sign In
@@ -318,203 +210,239 @@ export default function AuthScreen({
                   type="button"
                   role="tab"
                   aria-selected={mode === 'signup'}
-                  className={mode === 'signup' ? 'active' : ''}
+                  className={`auth-segmented-pill ${mode === 'signup' ? 'active' : ''}`}
                   onClick={() => switchMode('signup')}
                 >
                   Create Account
                 </button>
               </div>
-            )}
-
-            <div className="auth-card-top">
-              <p className="eyebrow">{modeLabel}</p>
-              <h2>{title}</h2>
-              <p>{helper}</p>
             </div>
+          )}
 
-            {mode === 'signup' && (
-              <div className="role-selector-grid" role="group" aria-label="Workspace role">
-                <button
-                  type="button"
-                  className={`role-tile ${signupRole === 'student' ? 'selected teal' : ''}`}
-                  onClick={() => setSignupRole('student')}
-                >
-                  <span className="role-tile-dot" aria-hidden="true" />
-                  <div>
-                    <b>Student</b>
-                    <small>Published lectures &amp; tutor</small>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  className={`role-tile ${signupRole === 'professor' ? 'selected indigo' : ''}`}
-                  onClick={() => setSignupRole('professor')}
-                >
-                  <span className="role-tile-dot" aria-hidden="true" />
-                  <div>
-                    <b>Professor</b>
-                    <small>PDFs, lectures &amp; grading</small>
-                  </div>
-                </button>
-              </div>
-            )}
-
-            <form onSubmit={submit}>
-              {mode === 'signup' && (
-                <label className="auth-field-group">
-                  <span>Full Name</span>
-                  <div className="auth-input-shell">
-                    <span className="auth-input-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <circle cx="12" cy="8" r="4" strokeWidth="1.8" />
-                        <path d="M5 20a7 7 0 0114 0" strokeWidth="1.8" strokeLinecap="round" />
-                      </svg>
-                    </span>
-                    <input
-                      type="text"
-                      autoComplete="name"
-                      placeholder={signupRole === 'professor' ? 'Dr. Maya Rao' : 'Aarav Sharma'}
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                    />
-                  </div>
-                </label>
-              )}
-
-              {mode === 'signup' && signupRole === 'professor' && (
-                <label className="auth-field-group">
-                  <span>Educator Access Code</span>
-                  <div className="auth-input-shell">
-                    <span className="auth-input-icon">
-                      <LockIcon />
-                    </span>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Enter institutional educator code"
-                      value={educatorCode}
-                      onChange={(e) => setEducatorCode(e.target.value)}
-                    />
-                  </div>
-                </label>
-              )}
-
-              <label className="auth-field-group">
-                <span>University Email</span>
-                <div className="auth-input-shell">
-                  <span className="auth-input-icon">
-                    <MailIcon />
-                  </span>
-                  <input
-                    type="email"
-                    autoComplete="email"
-                    required
-                    placeholder="you@university.edu"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-              </label>
-
-              {mode !== 'reset' && (
-                <label className="auth-field-group">
-                  <span>Password</span>
-                  <div className="auth-input-shell password-field">
-                    <span className="auth-input-icon">
-                      <LockIcon />
-                    </span>
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                      required
-                      minLength={8}
-                      placeholder="Minimum 8 characters"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="password-toggle"
-                      onClick={() => setShowPassword((value) => !value)}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      title={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      <EyeIcon open={showPassword} />
-                    </button>
-                  </div>
-
-                  {mode === 'signup' && (
-                    <div className="password-strength-row" aria-live="polite">
-                      <span className={`pw-check ${hasMinLen ? 'met' : ''}`}>
-                        <i>{hasMinLen ? '✓' : '·'}</i> 8+ chars
-                      </span>
-                      <span className={`pw-check ${hasMixedChars ? 'met' : ''}`}>
-                        <i>{hasMixedChars ? '✓' : '·'}</i> Letters &amp; digits
-                      </span>
-                    </div>
-                  )}
-                </label>
-              )}
-
-              <button type="submit" className="auth-submit auth-submit-shimmer" disabled={busy}>
-                <span>
-                  {busy
-                    ? 'Please wait…'
-                    : mode === 'signup'
-                      ? `Create ${signupRole === 'professor' ? 'Educator' : 'Student'} Account`
-                      : mode === 'reset'
-                        ? 'Send recovery link'
-                        : 'Enter EduForge'}
-                </span>
-                {!busy && <i aria-hidden="true">→</i>}
-              </button>
-            </form>
-
-            {message && (
-              <p
-                className={`auth-message ${isError ? 'auth-message-error' : 'auth-message-success'}`}
-                role="status"
-              >
-                {message}
-              </p>
-            )}
-
-            <div className="auth-links">
-              {mode !== 'reset' ? (
+          {/* Editorial Title & Subtitle */}
+          <div className="auth-monolith-head">
+            <h2>
+              {mode === 'signup' ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => switchMode(mode === 'signup' ? 'login' : 'signup')}
-                  >
-                    {mode === 'signup'
-                      ? 'Already have an account? Sign in'
-                      : 'New to EduForge? Create an account'}
-                  </button>
-                  {mode === 'login' && (
-                    <button type="button" onClick={() => switchMode('reset')}>
-                      Forgot password?
-                    </button>
-                  )}
+                  Create your <em className="auth-title-serif">studio.</em>
+                </>
+              ) : mode === 'reset' ? (
+                <>
+                  Reset your <em className="auth-title-serif">password.</em>
                 </>
               ) : (
                 <>
-                  <button type="button" onClick={() => switchMode('login')}>
-                    ← Back to sign in
-                  </button>
-                  <button type="button" onClick={() => switchMode('signup')}>
-                    Create a new account
-                  </button>
+                  Welcome to <em className="auth-title-serif">the studio.</em>
                 </>
               )}
-            </div>
-
-            <p className="auth-privacy-note">
-              {mode === 'signup' && signupRole === 'professor'
-                ? 'Educator accounts require a verified institutional code · Drafts stay private until published.'
-                : 'Role boundaries enforced server-side · Draft materials isolated from students.'}
+            </h2>
+            <p>
+              {mode === 'signup'
+                ? 'Select your role to initialize an isolated academic workspace.'
+                : mode === 'reset'
+                  ? 'Enter your institutional email and choose a new password.'
+                  : 'Course-grounded neural lectures & cited intelligence.'}
             </p>
-          </section>
-        </div>
+          </div>
+
+          {/* Role Grid for Sign Up */}
+          {mode === 'signup' && (
+            <div className="auth-role-grid" role="group" aria-label="Account Role">
+              <button
+                type="button"
+                className={`role-card-btn ${signupRole === 'student' ? 'active stud' : ''}`}
+                onClick={() => setSignupRole('student')}
+              >
+                <div className="role-card-header">
+                  <span className="role-card-badge stud">STUDENT</span>
+                  <span className="role-card-dot" />
+                </div>
+                <b>Student Space</b>
+                <small>Lectures &amp; cited tutor</small>
+              </button>
+
+              <button
+                type="button"
+                className={`role-card-btn ${signupRole === 'professor' ? 'active prof' : ''}`}
+                onClick={() => setSignupRole('professor')}
+              >
+                <div className="role-card-header">
+                  <span className="role-card-badge prof">FACULTY</span>
+                  <span className="role-card-dot" />
+                </div>
+                <b>Educator Studio</b>
+                <small>Decks &amp; quiz engine</small>
+              </button>
+            </div>
+          )}
+
+          {/* Main Auth Form */}
+          <form className="auth-monolith-form" onSubmit={submit}>
+            {mode === 'signup' && (
+              <label className="auth-field">
+                <span className="auth-field-label">Full Name</span>
+                <div className="auth-input-wrapper">
+                  <span className="auth-icon" aria-hidden="true">
+                    <UserIcon />
+                  </span>
+                  <input
+                    type="text"
+                    autoComplete="name"
+                    required
+                    placeholder={signupRole === 'professor' ? 'Dr. Maya Rao' : 'Aarav Sharma'}
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                  />
+                </div>
+              </label>
+            )}
+
+            {mode === 'signup' && signupRole === 'professor' && (
+              <label className="auth-field">
+                <div className="auth-field-row">
+                  <span className="auth-field-label">Faculty Authorization Key</span>
+                </div>
+                <div className="auth-input-wrapper">
+                  <span className="auth-icon" aria-hidden="true">
+                    <KeyIcon />
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter institutional authorization key"
+                    value={educatorCode}
+                    onChange={(e) => setEducatorCode(e.target.value)}
+                  />
+                </div>
+              </label>
+            )}
+
+            <label className="auth-field">
+              <span className="auth-field-label">Institutional Email</span>
+              <div className="auth-input-wrapper">
+                <span className="auth-icon" aria-hidden="true">
+                  <MailIcon />
+                </span>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  required
+                  placeholder="you@university.edu"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+            </label>
+
+            <label className="auth-field">
+              <div className="auth-field-row">
+                <span className="auth-field-label">
+                  {mode === 'reset' ? 'New Password' : 'Password'}
+                </span>
+                {mode === 'login' && (
+                  <button
+                    type="button"
+                    className="auth-link-inline"
+                    onClick={() => switchMode('reset')}
+                  >
+                    Forgot?
+                  </button>
+                )}
+              </div>
+              <div className="auth-input-wrapper">
+                <span className="auth-icon" aria-hidden="true">
+                  <LockIcon />
+                </span>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                  required
+                  minLength={8}
+                  placeholder={mode === 'reset' ? 'New password (min. 8 characters)' : 'Minimum 8 characters'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="auth-eye-btn"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  <EyeIcon open={showPassword} />
+                </button>
+              </div>
+
+              {(mode === 'signup' || mode === 'reset') && (
+                <div className="auth-pw-criteria">
+                  <span className={`pw-criterion ${hasMinLen ? 'valid' : ''}`}>
+                    <i>{hasMinLen ? '✓' : '·'}</i> 8+ characters
+                  </span>
+                  <span className={`pw-criterion ${hasMixedChars ? 'valid' : ''}`}>
+                    <i>{hasMixedChars ? '✓' : '·'}</i> Letters &amp; digits
+                  </span>
+                </div>
+              )}
+            </label>
+
+            {/* Primary Action Button */}
+            <button type="submit" className="auth-submit-btn" disabled={busy}>
+              <span>
+                {busy
+                  ? 'Verifying…'
+                  : mode === 'signup'
+                    ? `Launch ${signupRole === 'professor' ? 'Educator Studio' : 'Student Space'}`
+                    : mode === 'reset'
+                      ? 'Update Password & Enter Studio'
+                      : 'Sign In to Workspace'}
+              </span>
+              {!busy && <i>→</i>}
+            </button>
+          </form>
+
+          {/* Feedback Status Toast */}
+          {message && (
+            <div
+              className={`auth-status-toast ${isError ? 'error' : 'success'}`}
+              role="status"
+            >
+              <span>{isError ? '⚠' : '✓'}</span>
+              <span>{message}</span>
+            </div>
+          )}
+
+          {/* Footer Navigation */}
+          <div className="auth-monolith-footer">
+            {mode !== 'reset' ? (
+              <button
+                type="button"
+                className="auth-switch-link"
+                onClick={() => switchMode(mode === 'signup' ? 'login' : 'signup')}
+              >
+                {mode === 'signup' ? (
+                  <>
+                    Already have an account? <em>Sign in →</em>
+                  </>
+                ) : (
+                  <>
+                    New to EduForge AI? <em>Create an account →</em>
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="auth-switch-link"
+                onClick={() => switchMode('login')}
+              >
+                ← Back to sign in
+              </button>
+            )}
+
+            <span className="auth-monolith-footnote">
+              <LockIcon /> Strict role isolation enforced • AES encrypted
+            </span>
+          </div>
+        </section>
       </div>
     </main>
   );

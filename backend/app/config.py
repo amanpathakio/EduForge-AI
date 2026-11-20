@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     # Database Configuration (PostgreSQL with SQLite fallback)
     DATABASE_URL: str = f"sqlite:///{BASE_DIR / 'data' / 'eduforge.db'}"
 
+    # ElevenLabs Voice Cloning & Audio Synthesis
+    ELEVENLABS_API_KEY: str = ""
+    ELEVENLABS_MODEL_ID: str = "eleven_turbo_v2_5"
+    ELEVENLABS_DEFAULT_VOICE_ID: str = "JBFqnCBsd6RMkjVDRZzb"
+    AUDIO_DIR: str = str(BASE_DIR / "data" / "audio")
+
     # Relevance filtering: distance threshold for accepting retrieved chunks from ChromaDB.
     # For Chroma configured with `hnsw:space` = "cosine", Chroma returns a cosine-distance
     # where smaller is more similar (0 = identical). Tune this via environment variable.

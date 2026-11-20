@@ -14,6 +14,7 @@ export default defineConfig({
       '/chat': 'http://127.0.0.1:8010',
       '/courses': 'http://127.0.0.1:8010',
       '/lectures': 'http://127.0.0.1:8010',
+      '/voices': 'http://127.0.0.1:8010',
     },
   },
 })

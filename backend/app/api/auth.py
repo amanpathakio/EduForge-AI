@@ -10,6 +10,9 @@ from app.auth import create_access_token, get_current_user, hash_password, verif
 from app.config import settings
 from app.db.session import get_db
 from app.models.auth import Profile
+import logging
+
+logger = logging.getLogger("eduforge.auth")
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -40,6 +43,11 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str = Field(..., min_length=3, max_length=320)
     password: str = Field(..., min_length=1, max_length=128)
+
+
+class ResetPasswordRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=320)
+    new_password: str = Field(..., min_length=8, max_length=128)
 
 
 class UpgradeRoleRequest(BaseModel):
@@ -111,8 +119,38 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     email = _normalize_email(payload.email)
     profile = db.scalar(select(Profile).where(Profile.email == email))
-    if not profile or not verify_password(payload.password, profile.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password.")
+    if not profile:
+        logger.warning(f"Login failed: user '{email}' not found.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No account found with this email. Please click 'Create Account' to sign up.",
+        )
+    if not verify_password(payload.password, profile.password_hash):
+        logger.warning(f"Login failed: incorrect password for '{email}'.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password. Please verify your password or click 'Forgot?' to reset it.",
+        )
+
+    token = create_access_token(profile)
+    logger.info(f"User '{email}' ({profile.role}) signed in successfully.")
+    return AuthTokenResponse(access_token=token, user=AuthUserRead.model_validate(profile))
+
+
+@router.post("/reset-password", response_model=AuthTokenResponse)
+def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """Reset password and return an authenticated session immediately."""
+    email = _normalize_email(payload.email)
+    profile = db.scalar(select(Profile).where(Profile.email == email))
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No account found with this email. Please verify the address or create a new account.",
+        )
+
+    profile.password_hash = hash_password(payload.new_password)
+    db.commit()
+    db.refresh(profile)
 
     token = create_access_token(profile)
     return AuthTokenResponse(access_token=token, user=AuthUserRead.model_validate(profile))

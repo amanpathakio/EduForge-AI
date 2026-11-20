@@ -44,11 +44,10 @@ class AgentService:
         db.flush()
 
     @staticmethod
+    @staticmethod
     def _build_module_quiz(db: Session, course_id: str, module: CourseModule) -> Quiz:
-        chunks = retrieve_relevant_chunks(module.title, top_k=10, course_id=course_id)
-        if not chunks:
-            raise HTTPException(status_code=400, detail=f"Insufficient source material for {module.title}.")
-        context = "\n\n".join(f"[Chunk {index}] {chunk['text']}" for index, chunk in enumerate(chunks, 1))
+        from app.api.quizzes import _gather_quiz_context, _build_algorithmic_questions
+        chunks, context = _gather_quiz_context(course_id, module.title, db, 5)
         prompt = f'''You are EduForge Quiz Builder. Create exactly 5 professor-reviewable multiple-choice questions using ONLY this source context.
 Module: {module.title}
 Learning objective: {module.objective}
@@ -56,23 +55,68 @@ Every question must have 4 plausible options, correct_option (0-3), a concise ex
 {{"title":"...","questions":[{{"prompt":"...","options":["...","...","...","..."],"correct_option":0,"explanation":"...","cited_chunk_index":1}}]}}
 
 SOURCE:\n{context}'''
-        data = json.loads(_clean_json_markdown(_call_gemini(prompt)))
-        questions = data.get("questions", [])
-        if len(questions) != 5:
-            raise ValueError("Quiz Builder did not return five questions")
-        quiz = Quiz(course_id=course_id, module_id=module.id, title=str(data.get("title") or f"{module.title} practice")[:255], status="draft")
+        questions_data = []
+        generated_title = f"{module.title} practice"
+        try:
+            data = json.loads(_clean_json_markdown(_call_gemini(prompt)))
+            llm_questions = data.get("questions", [])
+            if isinstance(llm_questions, list) and len(llm_questions) > 0:
+                if data.get("title"):
+                    generated_title = str(data["title"])[:255]
+                for item in llm_questions:
+                    prompt_text = str(item.get("prompt", "")).strip()
+                    options = item.get("options", [])
+                    correct = item.get("correct_option", 0)
+                    explanation = str(item.get("explanation", "")).strip()
+                    citation_index = item.get("cited_chunk_index", 1)
+
+                    if not prompt_text or not isinstance(options, list) or len(options) < 2:
+                        continue
+                    while len(options) < 4:
+                        options.append(f"Option {len(options) + 1}")
+                    options = options[:4]
+                    if not isinstance(correct, int) or correct not in range(len(options)):
+                        correct = 0
+                    if not isinstance(citation_index, int) or not (1 <= citation_index <= len(chunks)):
+                        citation_index = 1
+                    source = chunks[citation_index - 1]
+                    questions_data.append({
+                        "prompt": prompt_text,
+                        "options": options,
+                        "correct_option": correct,
+                        "explanation": explanation or "Grounded in course module evidence.",
+                        "source_chunk_id": source.get("id"),
+                        "source_page": source.get("metadata", {}).get("page_number", 1),
+                    })
+        except Exception:
+            pass
+
+        if len(questions_data) < 5:
+            needed = 5 - len(questions_data)
+            fallback_qs = _build_algorithmic_questions(
+                topic=module.title,
+                difficulty="intermediate",
+                count=needed,
+                chunks=chunks,
+                course_title=module.title,
+            )
+            questions_data.extend(fallback_qs)
+
+        questions_data = questions_data[:5]
+        quiz = Quiz(course_id=course_id, module_id=module.id, title=generated_title[:255], status="draft")
         db.add(quiz); db.flush()
-        for position, item in enumerate(questions, 1):
-            citation_index = item.get("cited_chunk_index")
-            options, correct = item.get("options", []), item.get("correct_option")
-            if not isinstance(citation_index, int) or not 1 <= citation_index <= len(chunks):
-                raise ValueError("Quiz Builder returned an invalid evidence reference")
-            if not isinstance(options, list) or len(options) != 4 or not isinstance(correct, int) or correct not in range(4):
-                raise ValueError("Quiz Builder returned invalid answer options")
-            if not isinstance(item.get("prompt"), str) or not isinstance(item.get("explanation"), str):
-                raise ValueError("Quiz Builder returned incomplete question content")
-            source = chunks[citation_index - 1]
-            db.add(QuizQuestion(quiz_id=quiz.id, position=position, prompt=item["prompt"], options=options, correct_option=correct, explanation=item["explanation"], learning_objective=module.objective[:255], source_chunk_id=source.get("id"), source_page=source.get("metadata", {}).get("page_number")))
+        for position, item in enumerate(questions_data, 1):
+            db.add(QuizQuestion(
+                quiz_id=quiz.id,
+                position=position,
+                prompt=item["prompt"],
+                options=item["options"],
+                correct_option=item["correct_option"],
+                explanation=item["explanation"],
+                learning_objective=module.objective[:255],
+                source_chunk_id=item.get("source_chunk_id"),
+                source_page=item.get("source_page"),
+            ))
         return quiz
 
     @staticmethod

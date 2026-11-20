@@ -12,7 +12,7 @@ export default function StarterPrompts({ isVisible, onSelectPrompt }) {
 
   return (
     <div id="suggestions-container" className="suggestions-container">
-      <p className="suggestion-label">Suggested Questions:</p>
+      <p className="suggestion-label">Quick Prompts</p>
       <div id="suggestion-pills" className="suggestion-pills">
         {DEFAULT_SUGGESTIONS.map((question, index) => (
           <button
@@ -21,7 +21,8 @@ export default function StarterPrompts({ isVisible, onSelectPrompt }) {
             type="button"
             onClick={() => onSelectPrompt(question)}
           >
-            {question}
+            <span>{question}</span>
+            <i aria-hidden="true">→</i>
           </button>
         ))}
       </div>

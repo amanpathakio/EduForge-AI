@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusText = document.getElementById('backend-status-text');
     const apiKeyWarning = document.getElementById('api-key-warning');
     const statChunks = document.getElementById('stat-chunks');
-    
+
     // Upload Elements
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
@@ -65,13 +65,13 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(API_HEALTH);
             if (!response.ok) throw new Error('Unhealthy status');
-            
+
             const data = await response.json();
-            
+
             // Update connection status
             statusDot.className = 'status-dot online';
             statusText.textContent = 'System Active';
-            
+
             // Update stats
             statChunks.textContent = data.total_indexed_chunks || 0;
 
@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // Using XMLHttpRequest to track file upload progress
             const xhr = new XMLHttpRequest();
-            
+
             xhr.upload.addEventListener('progress', (e) => {
                 if (e.lengthComputable) {
                     const percentage = Math.round((e.loaded / e.total) * 100);
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const displayPercent = Math.min(percentage, 95);
                     uploadPercentage.textContent = `${displayPercent}%`;
                     uploadProgressBar.style.width = `${displayPercent}%`;
-                    
+
                     if (displayPercent >= 95) {
                         processingMsg.classList.remove('hidden');
                     }
@@ -227,9 +227,9 @@ document.addEventListener('DOMContentLoaded', () => {
             uploadPercentage.textContent = '100%';
             uploadProgressBar.style.width = '100%';
             processingMsg.classList.add('hidden');
-            
+
             showUploadFeedback(`Successfully indexed "${result.filename}" (${result.chunks_created} chunks created).`, "success");
-            
+
             // Trigger health check to refresh chunk count
             setTimeout(checkSystemHealth, 500);
 
@@ -280,10 +280,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Append user bubble
         appendBubble('user', questionText);
-        
+
         // Append loading skeleton
         const skeletonId = appendSkeletonBubble();
-        
+
         isGenerating = true;
 
         try {
@@ -302,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json();
-            
+
             // Save chunks for citation click auditing
             if (data.retrieved_chunks) {
                 lastRetrievedChunks = lastRetrievedChunks.concat(data.retrieved_chunks);
@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const bubble = document.createElement('div');
         bubble.className = 'msg-bubble';
-        
+
         // Convert simple markdown code and bold syntax for clean rendering
         bubble.innerHTML = formatMarkdown(text);
         messageWrapper.appendChild(bubble);
@@ -344,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sender === 'assistant' && sources && sources.length > 0) {
             const citationSection = document.createElement('div');
             citationSection.className = 'msg-citations';
-            
+
             const citationTitle = document.createElement('span');
             citationTitle.className = 'citations-title';
             citationTitle.textContent = 'Grounded Sources:';
@@ -357,9 +357,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Find matching chunk to pass coordinates
                 const matchedChunk = chunks.find(c => {
                     const formatted = `${c.metadata.source_filename} — Page ${c.metadata.page_number}`;
-                    return formatted.toLowerCase() === sourceStr.toLowerCase() || 
-                           sourceStr.toLowerCase().includes(c.metadata.source_filename.toLowerCase()) && 
-                           sourceStr.includes(String(c.metadata.page_number));
+                    return formatted.toLowerCase() === sourceStr.toLowerCase() ||
+                        sourceStr.toLowerCase().includes(c.metadata.source_filename.toLowerCase()) &&
+                        sourceStr.includes(String(c.metadata.page_number));
                 }) || lastRetrievedChunks.find(c => {
                     const formatted = `${c.metadata.source_filename} — Page ${c.metadata.page_number}`;
                     return formatted.toLowerCase() === sourceStr.toLowerCase();
@@ -381,7 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     badge.disabled = true;
                     badge.title = "Source text chunk detail unavailable";
                 }
-                
+
                 list.appendChild(badge);
             });
 
@@ -423,7 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Confirm clear
         const messages = chatMessages.querySelectorAll('.chat-msg');
         if (messages.length === 0) return;
-        
+
         chatMessages.innerHTML = '';
         chatMessages.appendChild(welcomeScreen);
         welcomeScreen.classList.remove('hidden');
@@ -448,11 +448,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function openCitationInspector(chunk, citationLabel) {
         drawerSourceTitle.textContent = citationLabel;
         drawerChunkText.textContent = chunk.text;
-        
+
         // Render distance score margin
         const distance = chunk.distance !== undefined ? chunk.distance.toFixed(4) : 'N/A';
         drawerDistanceVal.textContent = distance;
-        
+
         // Calculate similarity percentage for aesthetic value
         let fillPercent = 80;
         if (chunk.distance !== undefined) {
@@ -461,11 +461,11 @@ document.addEventListener('DOMContentLoaded', () => {
             fillPercent = similarity;
         }
         drawerDistanceBar.style.width = `${fillPercent}%`;
-        
+
         // Chunk ID and path
         drawerChunkId.textContent = chunk.id || 'N/A';
         drawerFilePath.textContent = `data/uploads/${chunk.metadata?.source_filename || ''}`;
-        
+
         // Toggle visibility
         citationDrawer.classList.remove('hidden');
     }

@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import VoiceLectureChat from '../components/VoiceLectureChat';
+import VoiceCloneModal from '../components/VoiceCloneModal';
+import VideoLecturePlayer from '../components/VideoLecturePlayer';
 import {
   generateCourseLecture,
   getLecture,
@@ -61,6 +64,10 @@ export default function LectureStudioView({
   const [isPublishing, setIsPublishing] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null); // { type: 'slide' | 'lecture', slideIndex?, label }
   const [isDeletingItem, setIsDeletingItem] = useState(false);
+  const [showVoiceChat, setShowVoiceChat] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState(null);
 
   const handlePublishLecture = async () => {
     if (!currentLecture || isPublishing) return;
@@ -324,6 +331,38 @@ export default function LectureStudioView({
           </div>
 
           <div className="editor-top-actions">
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => setShowVoiceModal(true)}
+              title="Configure ElevenLabs Professor Voice & Voice Cloning"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 6 }}>
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+              </svg>
+              {selectedVoice ? selectedVoice.name : 'Professor Voice'}
+            </button>
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={() => setShowVideoPlayer(true)}
+              title="Watch full synchronized 16:9 Video Lecture"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: 6 }}>
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              Watch Video Lecture
+            </button>
+            <button
+              type="button"
+              className={`button ${showVoiceChat ? 'button-primary' : 'button-secondary'}`}
+              onClick={() => setShowVoiceChat((v) => !v)}
+            >
+              {showVoiceChat ? 'Hide Voice Chat' : 'Voice Chat'}
+            </button>
             {currentLecture.status !== 'published' ? (
               <button
                 className="button button-primary"
@@ -491,7 +530,7 @@ export default function LectureStudioView({
 
                 <div className="speaker-notes-section">
                   <button type="button" className="notes-disclosure" onClick={() => setShowSpeakerNotes((visible) => !visible)} aria-expanded={showSpeakerNotes}>
-                    <span>🎙️ Presenter notes <small>Optional · used for teaching delivery and future narration</small></span>
+                    <span>Presenter notes <small>Optional · delivery &amp; voice script</small></span>
                     <span>{showSpeakerNotes ? 'Hide' : 'Show'}</span>
                   </button>
                   {showSpeakerNotes && <textarea
@@ -508,7 +547,7 @@ export default function LectureStudioView({
                 <div className="slide-citations-section">
                   <div className="section-title-row">
                     <label className="field-label">
-                      📚 Grounded Citations ({currentSlide.citations?.length || 0})
+                      Grounded Citations ({currentSlide.citations?.length || 0})
                     </label>
                     <span className="citations-hint">Click a badge to inspect the exact course chunk</span>
                   </div>
@@ -587,6 +626,18 @@ export default function LectureStudioView({
           </div>
         </div>
 
+        {showVoiceChat && (
+          <VoiceLectureChat
+            key={`studio-voice-${currentLecture.id}-${currentSlide?.id || selectedSlideIndex}`}
+            courseId={currentLecture.course_id || selectedCourseId}
+            lectureTitle={currentLecture.title}
+            slide={currentSlide}
+            roleLabel="PROFESSOR STUDIO VOICE CHAT"
+            onOpenCitation={onOpenCitation}
+            onClose={() => setShowVoiceChat(false)}
+          />
+        )}
+
         {pendingDelete && (
           <div className="modal-overlay" onClick={() => !isDeletingItem && setPendingDelete(null)}>
             <div className="modal-content glass-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
@@ -624,6 +675,29 @@ export default function LectureStudioView({
             </div>
           </div>
         )}
+        {showVoiceModal && (
+          <VoiceCloneModal
+            isOpen={showVoiceModal}
+            onClose={() => setShowVoiceModal(false)}
+            selectedVoiceId={selectedVoice?.voice_id}
+            onSelectVoice={(v) => {
+              setSelectedVoice(v);
+            }}
+          />
+        )}
+
+        {showVideoPlayer && currentLecture && (
+          <VideoLecturePlayer
+            lectureId={currentLecture.id}
+            lectureTitle={currentLecture.title}
+            initialVoiceId={selectedVoice?.voice_id}
+            onClose={() => setShowVideoPlayer(false)}
+            onOpenVoiceModal={() => {
+              setShowVideoPlayer(false);
+              setShowVoiceModal(true);
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -633,12 +707,32 @@ export default function LectureStudioView({
     <div className="lecture-studio-container">
       <div className="studio-header">
         <div>
-          <h1 className="view-title">🎙️ AI Lecture Studio</h1>
+          <h1 className="view-title">AI Lecture Studio</h1>
           <p className="view-subtitle">
-            Generate comprehensive, slide-by-slide lectures strictly grounded in your course materials.
+            Slide-by-slide decks strictly grounded in your course PDFs.
           </p>
         </div>
+        {selectedCourseId && (
+          <button
+            type="button"
+            className={`button ${showVoiceChat ? 'button-primary' : 'button-secondary'}`}
+            onClick={() => setShowVoiceChat((v) => !v)}
+          >
+            {showVoiceChat ? 'Hide Voice Chat' : 'Course Voice Chat'}
+          </button>
+        )}
       </div>
+
+      {showVoiceChat && selectedCourseId && (
+        <VoiceLectureChat
+          key={`studio-course-voice-${selectedCourseId}`}
+          courseId={selectedCourseId}
+          lectureTitle={courses.find((c) => c.id === selectedCourseId)?.title || 'Course Session'}
+          roleLabel="STUDIO VOICE CHAT"
+          onOpenCitation={onOpenCitation}
+          onClose={() => setShowVoiceChat(false)}
+        />
+      )}
 
       <div className="generator-card-wrapper">
         <div className="generator-card glass-card">

@@ -245,9 +245,11 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Ambient Background Blobs */}
-      <div className="bg-blob blob-purple" aria-hidden="true"></div>
-      <div className="bg-blob blob-blue" aria-hidden="true"></div>
+      {/* Subtle Spatial Ambient Grid */}
+      <div className="workspace-ambient" aria-hidden="true">
+        <div className="workspace-grid-lines" />
+        <div className="workspace-aura-top" />
+      </div>
 
       {/* Warning Banner for Gemini API Key configuration */}
       <ApiKeyWarning isConfigured={geminiConfigured} />
@@ -290,6 +292,7 @@ export default function App() {
               <DashboardOverview
                 courses={courses}
                 chunkCount={chunkCount}
+                currentUser={currentUser}
                 onNavigate={(viewId) => setCurrentView(viewId)}
                 onOpenCourse={handleOpenCourse}
                 onOpenStudio={(course) => {
@@ -330,6 +333,7 @@ export default function App() {
               <StudentTutor
                 courses={courses}
                 activeCourse={activeCourse}
+                isEducator={isEducator}
                 onSelectCourse={(courseId) => {
                   const found = courses.find((c) => c.id === courseId);
                   if (found) setActiveCourse(found);
@@ -348,6 +352,7 @@ export default function App() {
             {currentView === 'student-learning' && (
               <StudentLearningView
                 courses={courses}
+                currentUser={currentUser}
                 onOpenCourse={handleOpenCourse}
                 onOpenTutor={() => setCurrentView('ask-ai')}
                 onJoinCourse={handleJoinCourse}

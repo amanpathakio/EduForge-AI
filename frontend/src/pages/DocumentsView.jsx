@@ -45,7 +45,7 @@ export default function DocumentsView({ courses, onSelectCourse, onDocumentsUpda
         <div>
           <h1 className="view-title">Course Documents</h1>
           <p className="view-subtitle">
-            Upload and view indexed PDFs that ground your courses, AI tutor responses, and lectures.
+            Indexed PDFs grounding Q&amp;A and lectures.
           </p>
         </div>
 

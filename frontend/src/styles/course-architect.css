@@ -1,0 +1,312 @@
+/* ==========================================================================
+   Course Planner / Architect - Clean Utility Design (Linear / Notion Style)
+   ========================================================================== */
+
+.course-architect-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+/* Header */
+.architect-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--ef-border, rgba(255, 255, 255, 0.08));
+}
+
+.architect-header-row h2 {
+  font-size: 1.35rem;
+  font-weight: 650;
+  color: var(--ef-text, #ffffff);
+  margin: 0 0 0.25rem 0;
+  letter-spacing: -0.015em;
+}
+
+.architect-header-row p {
+  font-size: 0.88rem;
+  color: var(--ef-text-muted, #94a3b8);
+  margin: 0;
+  max-width: 650px;
+  line-height: 1.5;
+}
+
+.planner-status-badge {
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--ef-border, rgba(255, 255, 255, 0.12));
+  background: var(--ef-surface-alt, rgba(255, 255, 255, 0.04));
+  color: var(--ef-text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+.planner-status-badge.working {
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.planner-status-badge.approved {
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.08);
+}
+
+/* Prompt / Goal Section */
+.planner-form-card {
+  padding: 1.35rem 1.5rem;
+  border-radius: 12px;
+  background: var(--ef-surface-card, rgba(18, 20, 29, 0.6));
+  border: 1px solid var(--ef-border, rgba(255, 255, 255, 0.08));
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.planner-form-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.planner-form-label-row label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--ef-text, #ffffff);
+}
+
+.planner-doc-count {
+  font-size: 0.76rem;
+  color: var(--ef-text-muted, #94a3b8);
+}
+
+.planner-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  background: var(--ef-surface-alt, rgba(0, 0, 0, 0.2));
+  border: 1px solid var(--ef-border, rgba(255, 255, 255, 0.12));
+  color: var(--ef-text, #ffffff);
+  font-family: inherit;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.planner-textarea:focus {
+  outline: none;
+  border-color: var(--ef-primary, #6366f1);
+}
+
+.planner-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.planner-hints {
+  font-size: 0.78rem;
+  color: var(--ef-text-muted, #64748b);
+}
+
+/* Warning box when 0 documents */
+.no-docs-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  font-size: 0.84rem;
+}
+
+/* Steps / Activity */
+.planner-activity-card {
+  padding: 1.15rem 1.35rem;
+  border-radius: 10px;
+  background: var(--ef-surface-card, rgba(18, 20, 29, 0.6));
+  border: 1px solid var(--ef-border, rgba(255, 255, 255, 0.08));
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.activity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ef-text, #ffffff);
+}
+
+.activity-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.activity-step-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.8rem;
+  color: var(--ef-text-muted, #94a3b8);
+}
+
+.activity-step-row.completed {
+  color: var(--ef-text, #e2e8f0);
+}
+
+.activity-step-row.completed .step-dot {
+  color: #10b981;
+}
+
+.activity-step-row.running {
+  color: #818cf8;
+}
+
+.step-dot {
+  font-size: 0.75rem;
+  width: 14px;
+  text-align: center;
+}
+
+/* Artifacts banner */
+.planner-artifacts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  font-size: 0.82rem;
+  color: #34d399;
+}
+
+/* Blueprint Section (Structured Academic Table / List) */
+.syllabus-card {
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: var(--ef-surface-card, rgba(18, 20, 29, 0.6));
+  border: 1px solid var(--ef-border, rgba(255, 255, 255, 0.08));
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.syllabus-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--ef-border, rgba(255, 255, 255, 0.08));
+}
+
+.syllabus-card-header h3 {
+  font-size: 1.1rem;
+  font-weight: 650;
+  color: var(--ef-text, #ffffff);
+  margin: 0 0 0.2rem 0;
+}
+
+.syllabus-card-header p {
+  font-size: 0.82rem;
+  color: var(--ef-text-muted, #94a3b8);
+  margin: 0;
+}
+
+.syllabus-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+/* Clean Modules List */
+.modules-table {
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  border: 1px solid var(--ef-border, rgba(255, 255, 255, 0.08));
+  overflow: hidden;
+}
+
+.module-row {
+  display: grid;
+  grid-template-columns: 48px 1fr 140px;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  background: var(--ef-surface-alt, rgba(255, 255, 255, 0.02));
+  border-bottom: 1px solid var(--ef-border, rgba(255, 255, 255, 0.06));
+  transition: background 0.15s ease;
+}
+
+.module-row:last-child {
+  border-bottom: none;
+}
+
+.module-row:hover {
+  background: var(--ef-surface-hover, rgba(255, 255, 255, 0.04));
+}
+
+.module-index {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ef-text-muted, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.module-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.module-info strong {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ef-text, #ffffff);
+}
+
+.module-info span {
+  font-size: 0.8rem;
+  color: var(--ef-text-muted, #94a3b8);
+  line-height: 1.4;
+}
+
+.module-source {
+  font-size: 0.72rem;
+  color: #10b981;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .module-row {
+    grid-template-columns: 36px 1fr;
+  }
+  .module-source {
+    grid-column: 2 / -1;
+    text-align: left;
+    margin-top: 0.2rem;
+  }
+}

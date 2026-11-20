@@ -27,7 +27,10 @@ class EmbeddingManager:
             model_name = settings.EMBEDDING_MODEL_NAME
             logger.info(f"Loading embedding model: '{model_name}'...")
             try:
-                self._model = SentenceTransformer(model_name)
+                try:
+                    self._model = SentenceTransformer(model_name, local_files_only=True)
+                except Exception:
+                    self._model = SentenceTransformer(model_name)
                 logger.info(f"Embedding model '{model_name}' loaded successfully.")
             except Exception as e:
                 logger.error(f"Failed to load embedding model '{model_name}': {str(e)}")
