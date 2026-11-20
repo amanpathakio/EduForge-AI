@@ -66,7 +66,9 @@ def _verify_educator_code(supplied_code: Optional[str]) -> bool:
     candidate = (supplied_code or "").strip()
     if not configured or not candidate:
         return False
-    return hmac.compare_digest(candidate, configured)
+    # Supports single master key or comma-separated list of individual professor keys
+    valid_codes = [c.strip() for c in configured.split(",") if c.strip()]
+    return any(hmac.compare_digest(candidate, code) for code in valid_codes)
 
 
 @router.get("/capabilities")
