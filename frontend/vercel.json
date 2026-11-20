@@ -5,6 +5,34 @@
       "destination": "https://eduforge-ai-mvkk.onrender.com/auth/:path*"
     },
     {
+      "source": "/auth",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/auth"
+    },
+    {
+      "source": "/voices/:path*",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/voices/:path*"
+    },
+    {
+      "source": "/voices",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/voices"
+    },
+    {
+      "source": "/lectures/:path*",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/lectures/:path*"
+    },
+    {
+      "source": "/lectures",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/lectures"
+    },
+    {
+      "source": "/quizzes/:path*",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/quizzes/:path*"
+    },
+    {
+      "source": "/quizzes",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/quizzes"
+    },
+    {
       "source": "/status/:path*",
       "destination": "https://eduforge-ai-mvkk.onrender.com/status/:path*"
     },
@@ -33,6 +61,10 @@
       "destination": "https://eduforge-ai-mvkk.onrender.com/documents/:path*"
     },
     {
+      "source": "/documents",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/documents"
+    },
+    {
       "source": "/chat/:path*",
       "destination": "https://eduforge-ai-mvkk.onrender.com/chat/:path*"
     },
@@ -43,6 +75,10 @@
     {
       "source": "/admin/:path*",
       "destination": "https://eduforge-ai-mvkk.onrender.com/admin/:path*"
+    },
+    {
+      "source": "/admin",
+      "destination": "https://eduforge-ai-mvkk.onrender.com/admin"
     },
     {
       "source": "/(.*)",

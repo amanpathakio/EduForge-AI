@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getAvailableVoices, cloneProfessorVoice, deleteClonedVoice } from '../services/api';
+import { getAvailableVoices, cloneProfessorVoice, deleteClonedVoice, API_BASE_URL } from '../services/api';
 
 export default function VoiceCloneModal({
   isOpen,
@@ -79,7 +79,7 @@ export default function VoiceCloneModal({
       audioRef.current = null;
     }
 
-    const previewUrl = voice.preview_url || `/voices/${encodeURIComponent(voice.voice_id)}/preview`;
+    const previewUrl = voice.preview_url || `${API_BASE_URL}/voices/${encodeURIComponent(voice.voice_id)}/preview`;
     const audio = new Audio(previewUrl);
     audioRef.current = audio;
     setPlayingVoiceId(voice.voice_id);
@@ -198,18 +198,27 @@ export default function VoiceCloneModal({
   };
 
   const stopRecording = () => {
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current);
-      recordingTimerRef.current = null;
-    }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      try {
-        mediaRecorderRef.current.stop();
-      } catch {
-        // ignore
+    return new Promise((resolve) => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
       }
-    }
-    setIsRecording(false);
+      setIsRecording(false);
+
+      const recorder = mediaRecorderRef.current;
+      if (recorder && recorder.state !== 'inactive') {
+        recorder.addEventListener('stop', () => {
+          setTimeout(() => resolve(true), 150);
+        }, { once: true });
+        try {
+          recorder.stop();
+        } catch {
+          resolve(true);
+        }
+      } else {
+        resolve(true);
+      }
+    });
   };
 
   const resetRecording = () => {
@@ -247,26 +256,47 @@ export default function VoiceCloneModal({
 
   const handleCloneSubmit = async (e) => {
     e.preventDefault();
+    setCloneError('');
+    setCloneSuccess('');
+
+    // If still recording, automatically stop and wait for file
+    let currentAudio = audioFile;
+    if (isRecording) {
+      await stopRecording();
+      await new Promise((r) => setTimeout(r, 200));
+    }
+
     if (!professorName.trim()) {
-      setCloneError('Please enter the professor’s name.');
+      setCloneError('Please enter a professor name (e.g. "Dr. Maya" or "Prof. Aman").');
       return;
     }
-    if (!audioFile) {
-      setCloneError('Please select an audio recording file (MP3, WAV, M4A).');
+
+    const effectiveAudio = audioFile || currentAudio;
+    if (!effectiveAudio) {
+      if (cloneAudioMode === 'record') {
+        setCloneError('Please record your voice first by clicking "Start Live Recording (Mic)". Speak clearly for 15–30 seconds.');
+      } else {
+        setCloneError('Please select or upload an audio recording file (MP3, WAV, M4A, WEBM).');
+      }
+      return;
+    }
+
+    if (effectiveAudio.size < 1024) {
+      setCloneError('The recorded audio is too short or empty. Please speak for at least 15–30 seconds.');
       return;
     }
 
     try {
       setIsCloning(true);
       setCloneError('');
-      setCloneSuccess('');
+      setCloneSuccess('Synthesizing neural voice with ElevenLabs... This takes a few seconds.');
 
       const formData = new FormData();
       formData.append('professor_name', professorName.trim());
-      formData.append('file', audioFile);
+      formData.append('file', effectiveAudio);
 
       const newVoice = await cloneProfessorVoice(formData);
-      setCloneSuccess(`Successfully cloned voice for ${newVoice.name}!`);
+      setCloneSuccess(`Successfully cloned voice for ${newVoice.name}! It is now active.`);
       setProfessorName('');
       setAudioFile(null);
       setAudioPreviewUrl(null);
@@ -279,7 +309,7 @@ export default function VoiceCloneModal({
       }
       setTimeout(() => {
         setActiveTab('select');
-      }, 1200);
+      }, 1000);
     } catch (err) {
       const msg = err.message || '';
       if (msg.includes('instant voice cloning') || msg.includes('upgrade your plan') || msg.includes('paid_plan_required')) {
@@ -603,6 +633,10 @@ export default function VoiceCloneModal({
               )}
             </div>
 
+            {/* Bottom error/success feedback right above action button */}
+            {cloneError && <div className="error-banner">{cloneError}</div>}
+            {cloneSuccess && <div className="success-banner">{cloneSuccess}</div>}
+
             <div className="voice-clone-actions">
               <button
                 type="button"
@@ -615,9 +649,9 @@ export default function VoiceCloneModal({
               <button
                 type="submit"
                 className="button button-primary"
-                disabled={isCloning || !audioFile || !professorName.trim()}
+                disabled={isCloning}
               >
-                {isCloning ? 'Cloning Professor Voice...' : 'Clone Voice with ElevenLabs →'}
+                {isCloning ? '⚡ Synthesizing AI Voice with ElevenLabs...' : 'Clone Voice with ElevenLabs →'}
               </button>
             </div>
           </form>
