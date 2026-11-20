@@ -43,11 +43,13 @@ configured_origins = [origin.strip() for origin in settings.FRONTEND_ORIGINS.spl
 local_dev_origins = [
     "http://localhost:5173", "http://127.0.0.1:5173",
     "http://localhost:5174", "http://127.0.0.1:5174",
+    "https://edu-forge-ai-jade.vercel.app",
 ]
 allowed_origins = list(dict.fromkeys([*configured_origins, *local_dev_origins]))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"^https://.*\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -72,23 +74,26 @@ if REACT_BUILD_DIR.exists() and (REACT_BUILD_DIR / "index.html").exists():
     if (REACT_BUILD_DIR / "assets").exists():
         app.mount("/assets", StaticFiles(directory=str(REACT_BUILD_DIR / "assets")), name="assets")
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend_spa(full_path: str):
+        file_path = FRONTEND_DIR / full_path
+        if full_path and file_path.is_file():
+            return FileResponse(str(file_path))
+        index_path = FRONTEND_DIR / "index.html"
+        if not index_path.exists():
+            return {"message": "EduForge AI Backend is running."}
+        return FileResponse(str(index_path))
 else:
-    FRONTEND_DIR = LEGACY_FRONTEND_DIR
-    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
-
-@app.get("/{full_path:path}")
-async def serve_frontend_spa(full_path: str):
-    """
-    Serve static files or fallback to index.html to support SPA client-side routing.
-    """
-    file_path = FRONTEND_DIR / full_path
-    if full_path and file_path.is_file():
-        return FileResponse(str(file_path))
-
-    index_path = FRONTEND_DIR / "index.html"
-    if not index_path.exists():
-        return {"message": "EduForge AI Backend is running. Frontend static files not found."}
-    return FileResponse(str(index_path))
+    @app.get("/")
+    def root_api_status():
+        return {
+            "status": "online",
+            "service": "EduForge AI Backend API",
+            "documentation": "/docs",
+            "health": "/health/live",
+            "frontend": "https://edu-forge-ai-jade.vercel.app"
+        }
 
 
 @app.on_event("startup")
