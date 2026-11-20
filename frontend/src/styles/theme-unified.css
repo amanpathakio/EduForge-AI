@@ -1520,6 +1520,27 @@ body::before {
   padding: 1.25rem 1.75rem !important;
   width: 100% !important;
   box-sizing: border-box !important;
+  background: var(--ef-surface-elevated);
+  border: 1px solid var(--ef-border);
+  border-radius: 14px;
+}
+
+[data-theme='dark'] .compact-header,
+[data-theme='dark'] .command-header {
+  background: var(--ef-surface-glass, rgba(13, 16, 28, 0.82)) !important;
+  border-color: var(--ef-border, rgba(148, 163, 255, 0.14)) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme='dark'] .studio-heading,
+[data-theme='dark'] .studio-heading span,
+[data-theme='dark'] .command-header h1 {
+  color: var(--ef-text, #f8fafc) !important;
+}
+
+[data-theme='dark'] .command-header-lead,
+[data-theme='dark'] .command-header p {
+  color: var(--ef-text-secondary, #b6c2d9) !important;
 }
 
 .command-header>div:first-child {

@@ -4907,25 +4907,41 @@ body::before {
     flex-direction: row !important;
     align-items: flex-end !important;
     justify-content: space-between !important;
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
+    background: var(--ef-surface-glass, #ffffff) !important;
+    border: 1px solid var(--ef-border, #e2e8f0) !important;
     border-radius: 14px !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+    box-shadow: var(--ef-shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.04)) !important;
     width: 100% !important;
     box-sizing: border-box !important;
 }
 
+[data-theme='dark'] .command-header {
+    background: var(--ef-surface-glass, rgba(13, 16, 28, 0.82)) !important;
+    border-color: var(--ef-border, rgba(148, 163, 255, 0.14)) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+}
+
 .command-header h1 {
     max-width: 720px;
-    color: #0f172a;
+    color: var(--ef-text, #0f172a);
     font-size: clamp(1.8rem, 2.6vw, 2.4rem);
     letter-spacing: -0.03em;
     font-weight: 700;
 }
 
+[data-theme='dark'] .command-header h1,
+[data-theme='dark'] .command-header .studio-heading {
+    color: var(--ef-text, #f8fafc) !important;
+}
+
 .command-header p {
-    color: #64748b;
+    color: var(--ef-text-secondary, #64748b);
     font-size: 0.88rem;
+}
+
+[data-theme='dark'] .command-header p,
+[data-theme='dark'] .command-header .command-header-lead {
+    color: var(--ef-text-secondary, #b6c2d9) !important;
 }
 
 .command-metrics {
@@ -5188,14 +5204,20 @@ body::before {
 
 .course-header {
     padding: 1.5rem 1.75rem;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--ef-surface-glass, #ffffff);
+    border: 1px solid var(--ef-border, #e2e8f0);
     border-radius: 14px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    box-shadow: var(--ef-shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.04));
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: space-between !important;
+}
+
+[data-theme='dark'] .course-header {
+    background: var(--ef-surface-glass, rgba(13, 16, 28, 0.82)) !important;
+    border-color: var(--ef-border, rgba(148, 163, 255, 0.14)) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
 }
 
 .course-badge {
