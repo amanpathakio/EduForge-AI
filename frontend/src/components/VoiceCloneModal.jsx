@@ -30,10 +30,52 @@ export default function VoiceCloneModal({
   const recordingTimerRef = useRef(null);
   const streamRef = useRef(null);
 
+  // Microphone device enumeration & real-time audio VU level monitoring
+  const [audioDevices, setAudioDevices] = useState([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState('');
+  const [micBoost, setMicBoost] = useState(true); // Default true: laptop mic mode (AGC on, no aggressive noise gating)
+  const [audioLevel, setAudioLevel] = useState(0); // 0 to 100%
+  const [silentWarning, setSilentWarning] = useState(false);
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const animFrameRef = useRef(null);
+  const isRecordingRef = useRef(false);
+
   // Audio preview playback for preset voices
   const [playingVoiceId, setPlayingVoiceId] = useState(null);
   const audioRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  const loadAudioDevices = async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const inputs = devices.filter((d) => d.kind === 'audioinput');
+      setAudioDevices(inputs);
+      if (!selectedDeviceId && inputs.length > 0) {
+        const defaultDev = inputs.find((d) => d.deviceId === 'default') || inputs[0];
+        if (defaultDev) setSelectedDeviceId(defaultDev.deviceId);
+      }
+    } catch (err) {
+      console.warn('Could not enumerate audio devices:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'clone') {
+      loadAudioDevices();
+    }
+  }, [isOpen, activeTab]);
+
+  useEffect(() => {
+    const handleDeviceChange = () => {
+      loadAudioDevices();
+    };
+    navigator.mediaDevices?.addEventListener?.('devicechange', handleDeviceChange);
+    return () => {
+      navigator.mediaDevices?.removeEventListener?.('devicechange', handleDeviceChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isOpen) {
@@ -44,6 +86,18 @@ export default function VoiceCloneModal({
       setPlayingVoiceId(null);
       if (isRecording) {
         stopRecording();
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      if (audioContextRef.current) {
+        try { audioContextRef.current.close(); } catch {}
+        audioContextRef.current = null;
+      }
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
       }
       return;
     }
@@ -133,14 +187,106 @@ export default function VoiceCloneModal({
     try {
       setCloneError('');
       setCloneSuccess('');
+      setSilentWarning(false);
+      setAudioLevel(0);
+
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error('Your browser does not support live microphone recording. Please use file upload.');
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true },
-      });
+      // Stop any prior tracks or visualizers
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      if (audioContextRef.current) {
+        try { audioContextRef.current.close(); } catch {}
+        audioContextRef.current = null;
+      }
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+
+      // Explicit constraints to fix silent laptop built-in microphone recordings:
+      // When micBoost is true (default):
+      // 1. autoGainControl: true -> amplifies distant room speech from built-in laptop mic.
+      // 2. echoCancellation: false -> prevents aggressive browser acoustic cancellation from wiping out voice.
+      // 3. noiseSuppression: false -> prevents browser noise gate from treating natural speech as background noise.
+      const audioConstraints = {
+        deviceId: selectedDeviceId && selectedDeviceId !== 'default' ? { ideal: selectedDeviceId } : undefined,
+        autoGainControl: micBoost ? true : false,
+        echoCancellation: micBoost ? false : true,
+        noiseSuppression: micBoost ? false : true,
+      };
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+      } catch (errConstraint) {
+        console.warn('Constrained getUserMedia failed, falling back to standard audio stream:', errConstraint);
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
       streamRef.current = stream;
+
+      // Refresh audio devices list now that microphone permission has been granted
+      loadAudioDevices();
+
+      // Real-time audio VU meter setup using Web Audio API
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        try {
+          const audioCtx = new AudioCtx();
+          if (audioCtx.state === 'suspended') {
+            await audioCtx.resume();
+          }
+          audioContextRef.current = audioCtx;
+          const source = audioCtx.createMediaStreamSource(stream);
+          const analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 256;
+          analyser.smoothingTimeConstant = 0.35;
+          source.connect(analyser);
+          analyserRef.current = analyser;
+
+          const bufferLength = analyser.frequencyBinCount;
+          const dataArray = new Uint8Array(bufferLength);
+          let silentFrameCount = 0;
+
+          const updateMeter = () => {
+            if (!isRecordingRef.current) return;
+            analyser.getByteFrequencyData(dataArray);
+
+            let maxVal = 0;
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) {
+              sum += dataArray[i];
+              if (dataArray[i] > maxVal) maxVal = dataArray[i];
+            }
+            const avg = sum / bufferLength;
+
+            // Map average frequency energy into a visible 0-100% scale
+            const level = Math.min(100, Math.round((avg / 35) * 100));
+            setAudioLevel(level);
+
+            // If level stays near 0 for ~2 seconds (120 frames @ 60fps), alert user
+            if (level < 3 && maxVal < 8) {
+              silentFrameCount++;
+              if (silentFrameCount > 100) {
+                setSilentWarning(true);
+              }
+            } else {
+              silentFrameCount = 0;
+              setSilentWarning(false);
+            }
+
+            animFrameRef.current = requestAnimationFrame(updateMeter);
+          };
+
+          animFrameRef.current = requestAnimationFrame(updateMeter);
+        } catch (audioInitErr) {
+          console.warn('Real-time audio visualizer setup skipped:', audioInitErr);
+        }
+      }
 
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
@@ -175,8 +321,20 @@ export default function VoiceCloneModal({
           streamRef.current.getTracks().forEach((track) => track.stop());
           streamRef.current = null;
         }
+
+        // Cleanup audio visualizer
+        if (animFrameRef.current) {
+          cancelAnimationFrame(animFrameRef.current);
+          animFrameRef.current = null;
+        }
+        if (audioContextRef.current) {
+          try { audioContextRef.current.close(); } catch {}
+          audioContextRef.current = null;
+        }
+        setAudioLevel(0);
       };
 
+      isRecordingRef.current = true;
       mediaRecorder.start(250);
       setIsRecording(true);
       setRecordingTime(0);
@@ -194,16 +352,28 @@ export default function VoiceCloneModal({
       console.error('Microphone recording error:', err);
       setCloneError(err.message || 'Microphone access denied. Please allow microphone permissions or upload an audio file.');
       setIsRecording(false);
+      isRecordingRef.current = false;
     }
   };
 
   const stopRecording = () => {
     return new Promise((resolve) => {
+      isRecordingRef.current = false;
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
         recordingTimerRef.current = null;
       }
       setIsRecording(false);
+
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+      if (audioContextRef.current) {
+        try { audioContextRef.current.close(); } catch {}
+        audioContextRef.current = null;
+      }
+      setAudioLevel(0);
 
       const recorder = mediaRecorderRef.current;
       if (recorder && recorder.state !== 'inactive') {
@@ -231,6 +401,8 @@ export default function VoiceCloneModal({
       setAudioPreviewUrl(null);
     }
     setRecordingTime(0);
+    setAudioLevel(0);
+    setSilentWarning(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -542,6 +714,50 @@ export default function VoiceCloneModal({
                     </p>
                   </div>
 
+                  {/* Microphone Input Selector & Laptop Sensitivity Optimization */}
+                  <div className="mic-selection-toolbar">
+                    <div className="mic-device-picker">
+                      <label htmlFor="mic-device-select" className="mic-picker-label">
+                        <span className="mic-icon-svg">🎙️</span>
+                        <span>Microphone:</span>
+                      </label>
+                      <select
+                        id="mic-device-select"
+                        className="mic-picker-select"
+                        value={selectedDeviceId}
+                        onChange={(e) => setSelectedDeviceId(e.target.value)}
+                        disabled={isRecording || isCloning}
+                        title="Select input microphone device"
+                      >
+                        {audioDevices.length > 0 ? (
+                          audioDevices.map((dev, idx) => (
+                            <option key={dev.deviceId || idx} value={dev.deviceId}>
+                              {dev.label || `Microphone ${idx + 1}`}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="">Default Microphone (Built-in / Headset)</option>
+                        )}
+                      </select>
+                    </div>
+
+                    <label
+                      className="mic-boost-checkbox-wrap"
+                      title="Optimized for built-in laptop microphones. Disables aggressive browser acoustic echo-cancellation and noise gating that mutes speech when not using headphones."
+                    >
+                      <input
+                        type="checkbox"
+                        checked={micBoost}
+                        onChange={(e) => setMicBoost(e.target.checked)}
+                        disabled={isRecording || isCloning}
+                      />
+                      <span className="mic-boost-text">
+                        <strong>Laptop Mic Boost</strong>
+                        <span className="mic-boost-sub">Auto-gain on, anti-muting active</span>
+                      </span>
+                    </label>
+                  </div>
+
                   <div className={`live-recorder-panel ${isRecording ? 'recording' : ''}`}>
                     {!audioFile && !isRecording && (
                       <button
@@ -561,6 +777,40 @@ export default function VoiceCloneModal({
                           <span className="pulse-dot" />
                           <span>RECORDING LIVE AUDIO</span>
                         </div>
+
+                        {/* Real-Time Live VU Voice Level Meter */}
+                        <div className="live-vu-meter-wrap">
+                          <div className="live-vu-meter-top">
+                            <span className="live-vu-meter-title">Live Voice Signal:</span>
+                            <span className={`live-vu-meter-status ${audioLevel > 4 ? 'active' : 'silent'}`}>
+                              {audioLevel > 4 ? `Detected (${audioLevel}%)` : 'Silent (0%)'}
+                            </span>
+                          </div>
+                          <div className="live-vu-meter-bar">
+                            <div
+                              className="live-vu-meter-fill"
+                              style={{
+                                width: `${Math.max(3, audioLevel)}%`,
+                                backgroundColor: audioLevel > 70 ? '#f59e0b' : audioLevel > 4 ? '#10b981' : '#64748b',
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Silent Alert if microphone is muted in Windows */}
+                        {silentWarning && (
+                          <div className="silent-warning-banner">
+                            <span className="silent-warning-icon">⚠️</span>
+                            <div className="silent-warning-desc">
+                              <strong>No voice detected from microphone!</strong>
+                              <p>
+                                Your laptop microphone may be muted in Windows or input volume is at 0%.
+                                Check <code>Windows Settings &gt; System &gt; Sound &gt; Input</code>, or switch microphone above.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
                         <div className="recording-timer">
                           {Math.floor(recordingTime / 60).toString().padStart(2, '0')}:
                           {(recordingTime % 60).toString().padStart(2, '0')}
