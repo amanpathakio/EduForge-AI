@@ -43,10 +43,7 @@ def generate_grounded_answer(
 
     # Handle case where no relevant chunks are found
     if not retrieved_chunks:
-        fallback_msg = (
-            "I could not find any relevant information in the uploaded course material to answer your question.\n\n"
-            "Sources:\nNone"
-        )
+        fallback_msg = "The answer is not available in the uploaded course material."
         logger.info("No context available to generate response. Returning default grounded fallback.")
         return fallback_msg, [], []
 
@@ -105,11 +102,20 @@ def generate_grounded_answer(
         if not raw_answer:
             raise GenerationError(f"Gemini API generation failed for all attempted models: {str(last_error)}")
 
-        # Append source citation section if not already present in response text
-        sources_formatted = "\n".join([f"- {src}" for src in sources_list])
-        final_answer = f"{raw_answer}\n\nSources:\n{sources_formatted}"
+        insufficient_phrases = [
+            "not available in the uploaded course material",
+            "not mentioned in the provided",
+            "cannot be answered from the provided",
+            "not contained in the provided",
+            "insufficient information in the uploaded course material",
+            "no mention of"
+        ]
+        is_insufficient = any(phrase in raw_answer.lower() for phrase in insufficient_phrases)
 
-        return final_answer, retrieved_chunks, sources_list
+        # Do not attach source chunks if the AI explicitly found no answer in the documents
+        effective_sources = [] if is_insufficient else sources_list
+
+        return raw_answer, retrieved_chunks, effective_sources
 
     except Exception as e:
         if isinstance(e, GenerationError):

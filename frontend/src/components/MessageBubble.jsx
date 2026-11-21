@@ -20,6 +20,15 @@ function findMatchedChunk(sourceStr, messageChunks = [], allChunks = []) {
   );
 }
 
+// Clean raw trailing "Sources:" or "**Sources:**" text dump from the message bubble
+// because the interactive Grounded Sources badges are already rendered below the bubble.
+function cleanDisplayText(text = '') {
+  if (!text) return '';
+  return String(text)
+    .replace(/(?:\r?\n){1,2}(?:\*{0,2}(?:Sources|References|Citations|Grounded Sources):?\*{0,2})[\s\S]*$/i, '')
+    .trim();
+}
+
 export default function MessageBubble({ message, allChunks = [], onCitationClick }) {
   const [isSpeaking, setIsSpeaking] = useState(false);
 
@@ -37,6 +46,7 @@ export default function MessageBubble({ message, allChunks = [], onCitationClick
 
   const isUser = message.sender === 'user';
   const ttsSupported = isSpeechSynthesisSupported();
+  const displayText = isUser ? message.text : cleanDisplayText(message.text);
 
   const toggleSpeak = () => {
     if (isSpeaking) {
@@ -44,7 +54,7 @@ export default function MessageBubble({ message, allChunks = [], onCitationClick
       setIsSpeaking(false);
       return;
     }
-    speakText(message.text, {
+    speakText(displayText, {
       onStart: () => setIsSpeaking(true),
       onEnd: () => setIsSpeaking(false),
       onError: () => setIsSpeaking(false),
@@ -55,9 +65,9 @@ export default function MessageBubble({ message, allChunks = [], onCitationClick
     <div className={`chat-msg ${isUser ? 'user' : 'assistant'}`}>
       <div className="msg-bubble">
         {isUser ? (
-          message.text
+          displayText
         ) : (
-          <ReactMarkdown>{message.text}</ReactMarkdown>
+          <ReactMarkdown>{displayText}</ReactMarkdown>
         )}
       </div>
 
@@ -67,6 +77,7 @@ export default function MessageBubble({ message, allChunks = [], onCitationClick
             type="button"
             className={`msg-speak-btn ${isSpeaking ? 'speaking' : ''}`}
             onClick={toggleSpeak}
+            title={isSpeaking ? 'Stop speech' : 'Listen to AI tutor response with natural voice'}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
